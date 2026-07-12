@@ -1,0 +1,141 @@
+<style>
+#erd svg.erDiagram .divider path { stroke-opacity: 0.5; }
+#erd svg.erDiagram .row-rect-odd path,
+#erd svg.erDiagram .row-rect-odd rect,
+#erd svg.erDiagram .row-rect-even path,
+#erd svg.erDiagram .row-rect-even rect { stroke: none !important; }
+</style>
+<div id="erd"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '13px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+  },
+});
+const src = `erDiagram
+  USER ||--o{ COMPANY : captures
+  USER ||--o{ FOLLOWUP : performs
+  USER ||--o{ CAPTURE_LOG : logs
+  USER ||--o{ WEEKLY_REPORT : submits
+  COMPANY ||--o{ CONTACT : has
+  COMPANY ||--o{ JOB_POSTING : posts
+  COMPANY ||--o{ LEAD_SCORE : scored_as
+  COMPANY ||--o{ PIPELINE_HISTORY : moves_through
+  COMPANY ||--o{ FOLLOWUP : receives
+  COMPANY ||--o{ CAPTURE_LOG : captured_via
+  SOURCE_PLATFORM ||--o{ CAPTURE_LOG : sourced_from
+
+  USER {
+    uuid id PK
+    string full_name
+    string email
+    string role
+    date joined_at
+  }
+  COMPANY {
+    uuid id PK
+    string company_name
+    string industry
+    string website
+    string license_no
+    string icp_match
+    string pipeline_stage
+    uuid captured_by FK
+    datetime created_at
+  }
+  CONTACT {
+    uuid id PK
+    uuid company_id FK
+    string name
+    string designation
+    string email
+    string phone
+    boolean is_decision_maker
+  }
+  JOB_POSTING {
+    uuid id PK
+    uuid company_id FK
+    string job_title
+    string platform
+    date posted_date
+    string hiring_signal_type
+  }
+  LEAD_SCORE {
+    uuid id PK
+    uuid company_id FK
+    int ai_score
+    string score_reason
+    datetime scored_at
+  }
+  PIPELINE_HISTORY {
+    uuid id PK
+    uuid company_id FK
+    string from_stage
+    string to_stage
+    datetime changed_at
+  }
+  FOLLOWUP {
+    uuid id PK
+    uuid company_id FK
+    uuid user_id FK
+    string note
+    date follow_up_date
+    string status
+  }
+  CAPTURE_LOG {
+    uuid id PK
+    uuid company_id FK
+    uuid user_id FK
+    uuid source_id FK
+    datetime captured_at
+    string raw_data_url
+  }
+  SOURCE_PLATFORM {
+    uuid id PK
+    string platform_name
+    string platform_type
+  }
+  WEEKLY_REPORT {
+    uuid id PK
+    uuid user_id FK
+    date week_start
+    int leads_captured
+    int leads_qualified
+    int followups_done
+  }`;
+const { svg } = await mermaid.render('erd-svg', src);
+document.getElementById('erd').innerHTML = svg;
+
+document.querySelectorAll('#erd svg.erDiagram .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx', '8');
+  for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+document.querySelectorAll('#erd svg.erDiagram .row-rect-odd path, #erd svg.erDiagram .row-rect-even path').forEach(p => {
+  p.setAttribute('stroke', 'none');
+});
+</script>

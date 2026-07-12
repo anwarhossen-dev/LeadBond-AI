@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "LeadBond AI Capture",
+  "version": "2.0.0",
+  "description": "Capture companies & jobs from LinkedIn, Google Maps, Facebook, BDJobs, Bikroy, Chaldal and any website — sync directly to LeadBond CRM.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://localhost:5000/*",
+    "https://*.linkedin.com/*",
+    "https://*.google.com/*",
+    "https://*.facebook.com/*",
+    "https://*.fb.com/*",
+    "https://*.bdjobs.com/*",
+    "https://*.bikroy.com/*",
+    "https://*.chaldal.com/*",
+    "https://*.daraz.com.bd/*",
+    "https://*.pathao.com/*",
+    "https://*.shohoz.com/*",
+    "https://*.shajgoj.com/*",
+    "https://*.rokomari.com/*",
+    "https://*/*",
+    "http://*/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon.png",
+      "48": "icon.png",
+      "128": "icon.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

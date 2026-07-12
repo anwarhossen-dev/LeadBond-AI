@@ -1,0 +1,243 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String         @id @default(uuid()) @db.Uuid
+  fullName      String         @map("full_name")
+  email         String         @unique
+  role          String
+  joinedAt      DateTime       @default(now()) @map("joined_at")
+  companies     Company[]
+  followups     Followup[]
+  captureLogs   CaptureLog[]
+  weeklyReports WeeklyReport[]
+
+  @@map("users")
+}
+
+model Company {
+  id              String            @id @default(uuid()) @db.Uuid
+  companyName     String            @map("company_name")
+  industry        String
+  website         String
+  licenseNo       String            @map("license_no")
+  icpMatch        String            @map("icp_match")
+  pipelineStage   String            @map("pipeline_stage")
+  capturedBy      String            @map("captured_by") @db.Uuid
+  createdAt       DateTime          @default(now()) @map("created_at")
+  
+  // New Sourcing & Firmographic properties
+  companySize     String?           @map("company_size")
+  headquarters    String?
+  country         String?
+  city            String?
+  phone           String?
+  email           String?
+  linkedin        String?
+  facebook        String?
+  twitter         String?
+  instagram       String?
+  contactPage     String?           @map("contact_page")
+  careerPage      String?           @map("career_page")
+  logo            String?
+  foundedYear     Int?              @map("founded_year")
+  employeesCount  Int?              @map("employees_count")
+  annualRevenue   String?           @map("annual_revenue")
+
+  capturedByUser  User              @relation(fields: [capturedBy], references: [id])
+  contacts        Contact[]
+  jobPostings     JobPosting[]
+  leadScores      LeadScore[]
+  pipelineHistory PipelineHistory[]
+  followups       Followup[]
+  captureLogs     CaptureLog[]
+  jobApplications JobApplication[]
+  networking      Networking[]
+
+  @@map("companies")
+}
+
+model Contact {
+  id              String   @id @default(uuid()) @db.Uuid
+  companyId       String   @map("company_id") @db.Uuid
+  name            String
+  designation     String
+  email           String
+  phone           String
+  isDecisionMaker Boolean  @map("is_decision_maker")
+  
+  // New CRM Contact Person properties
+  department      String?
+  linkedin        String?
+  notes           String?
+  
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("contacts")
+}
+
+model JobPosting {
+  id               String   @id @default(uuid()) @db.Uuid
+  companyId        String   @map("company_id") @db.Uuid
+  jobTitle         String   @map("job_title")
+  platform         String
+  postedDate       DateTime @map("posted_date")
+  hiringSignalType String   @map("hiring_signal_type")
+  company          Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("job_postings")
+}
+
+model LeadScore {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  aiScore     Int      @map("ai_score")
+  scoreReason String   @map("score_reason")
+  scoredAt    DateTime @default(now()) @map("scored_at")
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("lead_scores")
+}
+
+model PipelineHistory {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  fromStage String   @map("from_stage")
+  toStage   String   @map("to_stage")
+  changedAt DateTime @default(now()) @map("changed_at")
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("pipeline_histories")
+}
+
+model JobApplication {
+  id            String         @id @default(uuid()) @db.Uuid
+  companyId     String         @map("company_id") @db.Uuid
+  jobTitle      String         @map("job_title")
+  position      String?
+  department    String?
+  experience    String?
+  salary        String?
+  location      String?
+  workMode      String?        @map("work_mode") // Remote / Hybrid / Onsite
+  jobType       String?        @map("job_type") // Full Time / Contract / Internship
+  datePosted    DateTime?      @map("date_posted")
+  deadline      DateTime?
+  applyMethod   String?        @map("apply_method") // Email / Website / LinkedIn / Referral
+  applyEmail    String?        @map("apply_email")
+  applyLink     String?        @map("apply_link")
+  jobLink       String?        @map("job_link")
+  description   String?
+  requirements  String?
+  benefits      String?
+  status        String         @default("Draft") // Draft / Applied / Interview / Offer / Rejected
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  histories     JobHistory[]
+  documents     Document[]
+  followups     Followup[]
+
+  @@map("job_applications")
+}
+
+model Networking {
+  id               String    @id @default(uuid()) @db.Uuid
+  companyId        String    @map("company_id") @db.Uuid
+  platform         String?   // LinkedIn, Twitter, etc.
+  profileUrl       String?   @map("profile_url")
+  connectionStatus String?   @map("connection_status")
+  connectedDate    DateTime? @map("connected_date")
+  lastMessage      String?   @map("last_message")
+  nextFollowup     DateTime? @map("next_followup")
+  notes            String?
+
+  company          Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("networking")
+}
+
+model JobHistory {
+  id               String         @id @default(uuid()) @db.Uuid
+  jobApplicationId String         @map("job_application_id") @db.Uuid
+  status           String
+  remarks          String?
+  updatedBy        String?        @map("updated_by")
+  updatedAt        DateTime       @default(now()) @map("updated_at")
+
+  jobApplication   JobApplication @relation(fields: [jobApplicationId], references: [id], onDelete: Cascade)
+
+  @@map("job_histories")
+}
+
+model Document {
+  id               String         @id @default(uuid()) @db.Uuid
+  jobApplicationId String         @map("job_application_id") @db.Uuid
+  resume           String?
+  coverLetter      String?        @map("cover_letter")
+  proposal         String?
+  portfolio        String?
+  other            String?
+
+  jobApplication   JobApplication @relation(fields: [jobApplicationId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+model Followup {
+  id               String          @id @default(uuid()) @db.Uuid
+  userId           String          @map("user_id") @db.Uuid
+  note             String
+  followUpDate     DateTime        @map("follow_up_date")
+  status           String          // Pending / Completed
+
+  companyId        String?         @map("company_id") @db.Uuid
+  jobApplicationId String?         @map("job_application_id") @db.Uuid
+
+  company          Company?        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  jobApplication   JobApplication? @relation(fields: [jobApplicationId], references: [id], onDelete: Cascade)
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("followups")
+}
+
+model CaptureLog {
+  id             String         @id @default(uuid()) @db.Uuid
+  companyId      String         @map("company_id") @db.Uuid
+  userId         String         @map("user_id") @db.Uuid
+  sourceId       String         @map("source_id") @db.Uuid
+  capturedAt     DateTime       @default(now()) @map("captured_at")
+  rawDataUrl     String         @map("raw_data_url")
+  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourcePlatform SourcePlatform @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@map("capture_logs")
+}
+
+model SourcePlatform {
+  id           String       @id @default(uuid()) @db.Uuid
+  platformName String       @map("platform_name")
+  platformType String       @map("platform_type")
+  captureLogs  CaptureLog[]
+
+  @@map("source_platforms")
+}
+
+model WeeklyReport {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  weekStart      DateTime @map("week_start")
+  leadsCaptured  Int      @map("leads_captured")
+  leadsQualified Int      @map("leads_qualified")
+  followupsDone  Int      @map("followups_done")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("weekly_reports")
+}

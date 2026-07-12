@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>LeadBond AI Capture</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    :root {
+      --bg:      #0b0f19;
+      --card:    rgba(255,255,255,0.03);
+      --card2:   rgba(255,255,255,0.05);
+      --border:  rgba(255,255,255,0.08);
+      --borderH: rgba(255,255,255,0.15);
+      --grad:    linear-gradient(135deg,#00f2fe 0%,#4facfe 100%);
+      --cyan:    #00f2fe;
+      --blue:    #4facfe;
+      --violet:  #c084fc;
+      --green:   #10b981;
+      --yellow:  #f59e0b;
+      --red:     #ef4444;
+      --text:    #f3f4f6;
+      --muted:   #9ca3af;
+      --dim:     #6b7280;
+    }
+
+    * { box-sizing:border-box; margin:0; padding:0; }
+
+    body {
+      width: 420px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      font-size: 13px;
+      overflow-x: hidden;
+    }
+
+    /* ══════════════════════════════
+       HEADER
+    ══════════════════════════════ */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(11,15,25,0.95);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .logo-dot {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      background: var(--grad);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 900; color: #0b0f19;
+      flex-shrink: 0;
+    }
+
+    .logo-name {
+      font-size: 1rem; font-weight: 800;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .logo-sub { font-size: 0.6rem; color: var(--dim); margin-top: 1px; }
+
+    .header-right {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    /* ══════════════════════════════
+       TABS
+    ══════════════════════════════ */
+    .tabs {
+      display: flex;
+      background: rgba(0,0,0,0.3);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px 0;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover { color: var(--text); }
+
+    .tab-btn.active {
+      color: var(--cyan);
+      border-bottom-color: var(--cyan);
+      background: rgba(0,242,254,0.04);
+    }
+
+    /* ══════════════════════════════
+       TAB PANELS
+    ══════════════════════════════ */
+    .panel { display: none; flex-direction: column; }
+    .panel.active { display: flex; }
+
+    /* ══════════════════════════════
+       SINGLE CAPTURE TAB
+    ══════════════════════════════ */
+    .single-panel {
+      padding: 14px 16px;
+      gap: 11px;
+    }
+
+    /* Platform pill */
+    .platform-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .platform-pill {
+      display: flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.03em; text-transform: uppercase; border: 1px solid;
+    }
+    .pill-linkedin  { background:rgba(10,102,194,.12); color:#4facfe;  border-color:rgba(10,102,194,.25); }
+    .pill-google    { background:rgba(52,168,83,.12);  color:#4ade80;  border-color:rgba(52,168,83,.25); }
+    .pill-facebook  { background:rgba(24,119,242,.12); color:#60a5fa;  border-color:rgba(24,119,242,.25); }
+    .pill-bdjobs    { background:rgba(232,52,28,.12);  color:#f87171;  border-color:rgba(232,52,28,.25); }
+    .pill-bikroy    { background:rgba(245,158,11,.12); color:#fbbf24;  border-color:rgba(245,158,11,.25); }
+    .pill-chaldal   { background:rgba(16,185,129,.12); color:#34d399;  border-color:rgba(16,185,129,.25); }
+    .pill-daraz     { background:rgba(239,68,68,.12);  color:#f87171;  border-color:rgba(239,68,68,.25); }
+    .pill-generic   { background:rgba(156,163,175,.1); color:var(--muted); border-color:rgba(156,163,175,.2); }
+
+    .type-badge {
+      padding: 3px 8px; border-radius: 20px;
+      font-size: 0.65rem; font-weight: 700;
+      letter-spacing: 0.05em; text-transform: uppercase; border: 1px solid;
+    }
+    .badge-job     { background:rgba(192,132,252,.15); color:var(--violet); border-color:rgba(192,132,252,.3); }
+    .badge-company { background:rgba(0,242,254,.12);   color:var(--cyan);   border-color:rgba(0,242,254,.25); }
+    .badge-generic { background:rgba(156,163,175,.1);  color:var(--muted);  border-color:rgba(156,163,175,.2); }
+
+    /* Preview card */
+    .preview-card {
+      background: rgba(0,242,254,.04);
+      border: 1px solid rgba(0,242,254,.12);
+      border-radius: 10px; padding: 10px 12px;
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+    .preview-icon { font-size:1.3rem; flex-shrink:0; margin-top:2px; }
+    .preview-body h3 { font-size:.88rem; font-weight:700; margin-bottom:2px; }
+    .preview-body p  { font-size:.73rem; color:var(--muted); line-height:1.4; }
+    .preview-meta { display:flex; gap:6px; flex-wrap:wrap; margin-top:5px; }
+    .meta-chip {
+      font-size:.65rem; padding:2px 7px; border-radius:10px;
+      background:rgba(255,255,255,.05); border:1px solid var(--border); color:var(--muted);
+    }
+
+    /* Form */
+    .form-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 13px;
+      display: flex; flex-direction: column; gap: 9px;
+    }
+    .sec-title {
+      font-size:.7rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:.06em; color:var(--dim); margin-bottom:1px;
+    }
+    .form-group  { display:flex; flex-direction:column; gap:4px; }
+    .form-row    { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+    label {
+      font-size:.67rem; color:var(--muted); font-weight:600;
+      text-transform:uppercase; letter-spacing:.03em;
+    }
+    input, textarea, select {
+      background:rgba(0,0,0,.35); border:1px solid var(--border);
+      border-radius:7px; padding:7px 10px;
+      color:var(--text); font-size:.8rem;
+      font-family:'Inter',sans-serif;
+      transition:border-color .2s, box-shadow .2s;
+      outline:none; width:100%;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color:var(--cyan);
+      box-shadow:0 0 8px rgba(0,242,254,.15);
+    }
+    textarea { resize:none; }
+
+    /* ══════════════════════════════
+       BULK COLLECT TAB
+    ══════════════════════════════ */
+    .bulk-panel { gap: 0; }
+
+    /* Controls bar */
+    .bulk-controls {
+      padding: 12px 16px;
+      background: rgba(0,0,0,.25);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Platform tabs */
+    .plat-tabs {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    .plat-tab {
+      display: flex; align-items: center; gap: 4px;
+      padding: 5px 10px; border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--muted);
+      font-size: .7rem; font-weight: 600;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all .2s;
+      white-space: nowrap;
+    }
+    .plat-tab:hover { border-color:var(--borderH); color:var(--text); }
+    .plat-tab.active {
+      border-color: rgba(0,242,254,.4);
+      background: rgba(0,242,254,.08);
+      color: var(--cyan);
+    }
+
+    /* Slider row */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .slider-label {
+      font-size: .72rem; color: var(--muted); font-weight: 600;
+      white-space: nowrap;
+      min-width: 80px;
+    }
+    .slider-val {
+      font-size: .85rem; font-weight: 800;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      min-width: 36px;
+      text-align: right;
+    }
+    .slider {
+      -webkit-appearance: none; appearance: none;
+      flex: 1; height: 5px; border-radius: 3px; outline: none;
+      cursor: pointer;
+      background: linear-gradient(to right, #00f2fe var(--p,0%), rgba(255,255,255,.1) var(--p,0%));
+    }
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--grad);
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(0,242,254,.5);
+      transition: transform .15s;
+    }
+    .slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+    /* Action row */
+    .bulk-action-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .sel-info {
+      font-size: .72rem; color: var(--muted);
+      display: flex; align-items: center; gap: 4px;
+    }
+    .sel-count { color: var(--cyan); font-weight: 700; }
+    .action-btns { display: flex; gap: 6px; }
+    .btn-xs {
+      padding: 5px 10px; border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--muted); font-size: .7rem; font-weight: 600;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: all .2s;
+    }
+    .btn-xs:hover { border-color:var(--borderH); color:var(--text); }
+
+    /* ── Scrollable Company List ── */
+    .company-list {
+      height: 320px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 10px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    /* Custom scrollbar */
+    .company-list::-webkit-scrollbar { width: 5px; }
+    .company-list::-webkit-scrollbar-track { background: rgba(255,255,255,.02); border-radius:3px; }
+    .company-list::-webkit-scrollbar-thumb { background: rgba(0,242,254,.25); border-radius:3px; }
+    .company-list::-webkit-scrollbar-thumb:hover { background: rgba(0,242,254,.45); }
+
+    /* Company Card */
+    .co-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .co-card:hover {
+      border-color: var(--borderH);
+      background: var(--card2);
+      transform: translateX(2px);
+    }
+    .co-card.selected {
+      border-color: rgba(0,242,254,.35);
+      background: rgba(0,242,254,.05);
+    }
+
+    /* Checkbox */
+    .co-check {
+      width: 18px; height: 18px; border-radius: 5px;
+      border: 2px solid rgba(255,255,255,.2);
+      background: transparent;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: all .2s;
+    }
+    .co-card.selected .co-check {
+      border-color: var(--cyan);
+      background: rgba(0,242,254,.15);
+    }
+    .co-check-mark { color: var(--cyan); font-size: 11px; font-weight: 700; display:none; }
+    .co-card.selected .co-check-mark { display: block; }
+
+    /* Card info */
+    .co-info { flex: 1; min-width: 0; }
+    .co-name {
+      font-size: .82rem; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+    .co-sub {
+      font-size: .68rem; color: var(--muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .co-right {
+      display: flex; flex-direction: column;
+      align-items: flex-end; gap: 4px; flex-shrink: 0;
+    }
+    .co-salary {
+      font-size: .68rem; font-weight: 600;
+      color: var(--cyan);
+    }
+    .co-mode {
+      font-size: .6rem; padding: 2px 6px; border-radius: 6px;
+      background: rgba(192,132,252,.12); color: var(--violet);
+      border: 1px solid rgba(192,132,252,.2); font-weight: 600;
+    }
+
+    /* ICP dot */
+    .icp-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+    .icp-high   { background: #00e676; box-shadow: 0 0 5px #00e67660; }
+    .icp-medium { background: var(--yellow); }
+
+    /* Skeleton */
+    .skeleton-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 12px;
+      height: 54px;
+      background: linear-gradient(90deg,rgba(255,255,255,.03) 25%,rgba(255,255,255,.07) 50%,rgba(255,255,255,.03) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    /* ── Bottom Sync Bar (Bulk) ── */
+    .bulk-sync-bar {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      background: rgba(0,0,0,.35);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    /* ══════════════════════════════
+       BUTTONS
+    ══════════════════════════════ */
+    .btn-primary {
+      background: var(--grad);
+      color: #0b0f19; border: none;
+      border-radius: 9px; padding: 10px 16px;
+      font-size: .82rem; font-weight: 800;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      transition: opacity .2s, transform .1s;
+      font-family: 'Inter', sans-serif;
+      white-space: nowrap;
+    }
+    .btn-primary.full { width: 100%; }
+    .btn-primary:hover:not(:disabled) { opacity:.88; transform:translateY(-1px); }
+    .btn-primary:disabled { opacity:.4; cursor:not-allowed; }
+
+    .btn-secondary {
+      background: rgba(255,255,255,.05);
+      color: var(--muted); border: 1px solid var(--border);
+      border-radius: 7px; padding: 8px 14px;
+      font-size: .78rem; font-weight: 600;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: all .2s; white-space: nowrap;
+    }
+    .btn-secondary:hover { border-color:var(--borderH); color:var(--text); }
+
+    /* ══════════════════════════════
+       STATUS BAR
+    ══════════════════════════════ */
+    .status-bar {
+      display: none; align-items: center; gap: 8px;
+      padding: 8px 12px; border-radius: 8px;
+      font-size: .77rem; font-weight: 500; margin: 0 16px 8px;
+    }
+    .st-info    { display:flex; background:rgba(79,172,254,.1);  color:#4facfe; border:1px solid rgba(79,172,254,.2); }
+    .st-success { display:flex; background:rgba(16,185,129,.1);  color:#10b981; border:1px solid rgba(16,185,129,.2); }
+    .st-error   { display:flex; background:rgba(239,68,68,.1);   color:#ef4444; border:1px solid rgba(239,68,68,.2); }
+
+    .spinner {
+      width:12px; height:12px;
+      border:2px solid currentColor; border-right-color:transparent;
+      border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0;
+    }
+    @keyframes spin { 100%{transform:rotate(360deg)} }
+
+    /* ══════════════════════════════
+       PROGRESS OVERLAY
+    ══════════════════════════════ */
+    .progress-overlay {
+      display: none;
+      position: absolute; inset: 0;
+      background: rgba(11,15,25,.96);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 24px;
+      z-index: 100;
+    }
+    .progress-overlay.show { display: flex; }
+    .prog-title { font-size:.95rem; font-weight:700; text-align:center; }
+    .prog-bar-bg {
+      width: 100%; height: 8px;
+      background: rgba(255,255,255,.08);
+      border-radius: 4px; overflow: hidden;
+    }
+    .prog-bar-fill {
+      height: 100%; width: 0%;
+      background: var(--grad); border-radius: 4px;
+      transition: width .35s ease;
+      box-shadow: 0 0 10px rgba(0,242,254,.4);
+    }
+    .prog-stats {
+      font-size: .78rem; color: var(--muted);
+      display: flex; gap: 16px;
+    }
+    .prog-stats strong { color: var(--text); }
+    .prog-log {
+      width: 100%; max-height: 160px;
+      overflow-y: auto; display: flex; flex-direction: column; gap: 5px;
+    }
+    .prog-log::-webkit-scrollbar { width:4px; }
+    .prog-log::-webkit-scrollbar-thumb { background:rgba(0,242,254,.3); border-radius:2px; }
+    .log-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 10px; border-radius: 7px;
+      font-size: .72rem;
+      animation: fadeUp .25s ease;
+      background: rgba(16,185,129,.07);
+      border: 1px solid rgba(16,185,129,.12);
+    }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+
+    .prog-summary {
+      background: rgba(0,242,254,.06);
+      border: 1px solid rgba(0,242,254,.15);
+      border-radius: 10px; padding: 12px 16px;
+      display: flex; gap: 20px; width: 100%;
+    }
+    .sum-item { flex:1; text-align:center; }
+    .sum-item strong { display:block; font-size:1.4rem; font-weight:800;
+      background:var(--grad); -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent; background-clip:text; }
+    .sum-item span { font-size:.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+
+    /* ══════════════════════════════
+       FOOTER
+    ══════════════════════════════ */
+    .footer {
+      display: flex; justify-content: center; gap: 14px;
+      padding: 8px 16px 10px;
+      border-top: 1px solid var(--border);
+      background: rgba(0,0,0,.2);
+    }
+    .footer a { font-size:.68rem; color:var(--dim); text-decoration:none; transition:color .2s; }
+    .footer a:hover { color:var(--cyan); }
+
+    /* Single panel padding fix */
+    .single-content { padding: 12px 16px; display:flex; flex-direction:column; gap:10px; }
+  </style>
+</head>
+<body style="position:relative;">
+
+  <!-- ══ Header ══ -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-dot">L</div>
+      <div>
+        <div class="logo-name">LeadBond AI</div>
+        <div class="logo-sub">CRM Capture v2.0</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="platform-pill" class="platform-pill pill-generic">🌐 Web</span>
+      <span id="type-badge" class="type-badge badge-generic">Page</span>
+    </div>
+  </div>
+
+  <!-- ══ Tabs ══ -->
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-single">
+      📌 Single Capture
+    </button>
+    <button class="tab-btn" id="tab-bulk">
+      🗂️ Bulk Collect
+      <span style="background:rgba(0,242,254,.15);color:var(--cyan);border:1px solid rgba(0,242,254,.25);border-radius:10px;padding:1px 6px;font-size:.6rem;">10–50</span>
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PANEL 1 — SINGLE CAPTURE
+  ══════════════════════════════════════ -->
+  <div class="panel active" id="panel-single">
+    <div class="single-content">
+
+      <!-- Preview -->
+      <div class="preview-card" id="preview-card" style="display:none;">
+        <div class="preview-icon" id="preview-icon">🏢</div>
+        <div class="preview-body">
+          <h3 id="preview-name">—</h3>
+          <p  id="preview-sub">—</p>
+          <div class="preview-meta" id="preview-meta"></div>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <div class="form-card">
+        <div class="sec-title">📋 Capture Details</div>
+
+        <div class="form-group">
+          <label>Company Name *</label>
+          <input id="company-name" type="text" placeholder="e.g. Brain Station 23">
+        </div>
+
+        <div id="job-title-group" class="form-group" style="display:none;">
+          <label>Job Title</label>
+          <input id="job-title" type="text" placeholder="e.g. Software Engineer">
+        </div>
+
+        <div id="job-meta-row" class="form-row" style="display:none;">
+          <div class="form-group">
+            <label>Job Type</label>
+            <select id="job-type">
+              <option>Full Time</option><option>Part Time</option>
+              <option>Contract</option><option>Internship</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Work Mode</label>
+            <select id="work-mode">
+              <option>Remote</option><option>Hybrid</option><option>Onsite</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="salary-group" class="form-group" style="display:none;">
+          <label>Salary</label>
+          <input id="salary" type="text" placeholder="৳60,000/mo">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Email</label>
+            <input id="company-email" type="email" placeholder="info@co.com">
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input id="company-phone" type="text" placeholder="+880...">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Location</label>
+          <input id="location" type="text" placeholder="Dhaka, Bangladesh">
+        </div>
+
+        <div class="form-group">
+          <label>Industry</label>
+          <input id="industry" type="text" placeholder="Software & Technology">
+        </div>
+
+        <div class="form-group">
+          <label>Pipeline Stage</label>
+          <select id="pipeline-stage">
+            <option value="Captured">Sales: Captured</option>
+            <option value="Contacted">Sales: Contacted</option>
+            <option value="Qualified">Sales: Qualified</option>
+            <option value="Draft">Job: Draft</option>
+            <option value="Applied">Job: Applied</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea id="description" rows="2" placeholder="Details..."></textarea>
+        </div>
+
+        <button id="sync-btn" class="btn-primary full">⚡ Sync to LeadBond CRM</button>
+        <button id="rescrape-btn" class="btn-secondary" style="display:none; width:100%;">🔄 Re-scan Page</button>
+      </div>
+
+    </div>
+
+    <div id="status-bar" class="status-bar st-info">
+      <div id="status-spinner" class="spinner"></div>
+      <span id="status-text">Scanning page…</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PANEL 2 — BULK COLLECT
+  ══════════════════════════════════════ -->
+  <div class="panel" id="panel-bulk">
+
+    <!-- Controls -->
+    <div class="bulk-controls">
+
+      <!-- Platform tabs -->
+      <div class="plat-tabs" id="plat-tabs">
+        <button class="plat-tab active" data-plat="linkedin"   >💼 LinkedIn</button>
+        <button class="plat-tab"        data-plat="google_maps">🗺️ Maps</button>
+        <button class="plat-tab"        data-plat="facebook"   >📘 Facebook</button>
+        <button class="plat-tab"        data-plat="bdjobs"     >🇧🇩 BDJobs</button>
+        <button class="plat-tab"        data-plat="all_sites"  >🌐 All</button>
+      </div>
+
+      <!-- Slider -->
+      <div class="slider-row">
+        <span class="slider-label">কোম্পানি সংখ্যা:</span>
+        <input type="range" id="bulk-slider" class="slider" min="10" max="50" value="20"
+          style="--p:25%">
+        <span class="slider-val" id="slider-val">20 টি</span>
+      </div>
+
+      <!-- Action row -->
+      <div class="bulk-action-row">
+        <div class="sel-info">
+          <span class="sel-count" id="sel-count">0</span> সিলেক্ট /
+          <span id="total-count">0</span> টি
+        </div>
+        <div class="action-btns">
+          <button class="btn-xs" id="btn-select-all">✅ সব</button>
+          <button class="btn-xs" id="btn-clear-all">✖ ক্লিয়ার</button>
+          <button class="btn-xs" id="btn-refresh">🔄</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Scrollable list -->
+    <div class="company-list" id="company-list">
+      <!-- populated by JS -->
+    </div>
+
+    <!-- Status for bulk -->
+    <div id="bulk-status" class="status-bar st-info" style="margin-top:4px;">
+      <div class="spinner"></div>
+      <span id="bulk-status-text">প্ল্যাটফর্ম সিলেক্ট করুন…</span>
+    </div>
+
+    <!-- Sync bar -->
+    <div class="bulk-sync-bar">
+      <button id="bulk-sync-btn" class="btn-primary" style="flex:1;" disabled>
+        🚀 <span id="bulk-btn-label">সিলেক্ট করুন</span>
+      </button>
+      <a href="http://localhost:3000/bulk" target="_blank"
+        style="font-size:.7rem;color:var(--dim);text-decoration:none;white-space:nowrap;"
+        title="Full Manager">
+        🔗 Full
+      </a>
+    </div>
+
+  </div>
+
+  <!-- ══ Footer ══ -->
+  <div class="footer">
+    <a href="http://localhost:3000" target="_blank">🏠 Dashboard</a>
+    <a href="http://localhost:3000/leads" target="_blank">💼 Leads</a>
+    <a href="http://localhost:3000/jobs" target="_blank">🎯 Jobs</a>
+    <a href="http://localhost:3000/bulk" target="_blank">🗂️ Bulk</a>
+  </div>
+
+  <!-- ══ Progress Overlay ══ -->
+  <div class="progress-overlay" id="progress-overlay">
+    <div class="prog-title" id="prog-title">⚡ ইমপোর্ট চলছে…</div>
+
+    <div class="prog-bar-bg" style="width:100%;">
+      <div class="prog-bar-fill" id="prog-bar"></div>
+    </div>
+
+    <div class="prog-stats">
+      <span>✅ সম্পন্ন: <strong id="prog-done">0</strong></span>
+      <span>মোট: <strong id="prog-total">0</strong></span>
+      <span><strong id="prog-pct">0</strong>%</span>
+    </div>
+
+    <div class="prog-log" id="prog-log"></div>
+
+    <div class="prog-summary" id="prog-summary" style="display:none;">
+      <div class="sum-item">
+        <strong id="sum-companies">0</strong>
+        <span>নতুন কোম্পানি</span>
+      </div>
+      <div class="sum-item">
+        <strong id="sum-jobs">0</strong>
+        <span>জব টিকেট</span>
+      </div>
+      <div class="sum-item">
+        <strong id="sum-platform">—</strong>
+        <span>সোর্স</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;width:100%;">
+      <button id="prog-close-btn" class="btn-secondary" style="flex:1;display:none;">✖ বন্ধ</button>
+      <a id="prog-leads-link" href="http://localhost:3000/leads" target="_blank"
+        class="btn-primary" style="flex:1;display:none;text-decoration:none;
+        align-items:center;justify-content:center;">
+        Leads দেখুন →
+      </a>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
