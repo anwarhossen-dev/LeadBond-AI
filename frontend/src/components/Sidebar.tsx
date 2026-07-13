@@ -8,11 +8,16 @@ export default function Sidebar() {
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: '📊' },
-    { name: 'Leads Pipeline', path: '/leads', icon: '💼' },
-    { name: 'Job Tracker', path: '/jobs', icon: '🎯' },
+    { name: 'Sales CRM', path: '/crm', icon: '💼' },
+    { name: 'Leads Pipeline', path: '/leads', icon: '🎯' },
+    { name: 'Recruitment', path: '/recruitment', icon: '👔' },
+    { name: 'AI Writing Suite', path: '/writing', icon: '✍️' },
+    { name: 'Market Intelligence', path: '/market', icon: '📈' },
+    { name: 'BI Intelligence', path: '/intelligence', icon: '🔭' },
+    { name: 'Job Tracker', path: '/jobs', icon: '🗂️' },
     { name: 'AI Automation Hub', path: '/ai', icon: '🧠' },
     { name: 'Follow-ups', path: '/followups', icon: '⏰' },
-    { name: 'Bulk Collect', path: '/bulk', icon: '🗂️' },
+    { name: 'Bulk Collect', path: '/bulk', icon: '📦' },
   ];
 
   return (
@@ -22,11 +27,12 @@ export default function Sidebar() {
       position: 'fixed',
       top: '20px',
       left: '20px',
-      padding: '24px',
+      padding: '24px 20px',
       display: 'flex',
       flexDirection: 'column',
       zIndex: 100,
-      borderRight: '1px solid var(--panel-border)'
+      borderRight: '1px solid var(--panel-border)',
+      overflowY: 'auto',
     }}>
       <div style={{ marginBottom: '40px' }}>
         <h2 style={{ fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -34,7 +40,7 @@ export default function Sidebar() {
           <span className="text-gradient" style={{ fontWeight: 800 }}>LeadBond AI</span>
         </h2>
         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', paddingLeft: '4px' }}>
-          AI-Powered CRM Pipeline
+          AI Sales Intelligence Platform
         </p>
       </div>
 

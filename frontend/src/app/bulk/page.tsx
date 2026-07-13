@@ -71,21 +71,51 @@ export default function BulkCollectionPage() {
   const [importDone, setImportDone]           = useState(false);
   const [importSummary, setImportSummary]     = useState<ImportSummary | null>(null);
 
-  // ── Fetch preview whenever platform or count changes ──
+  // // ── Fetch preview whenever platform or count changes ──
+  // const fetchPreview = useCallback(async () => {
+  //   setLoading(true);
+  //   setSelected(new Set());
+  //   try {
+  //     const res = await fetch(`/api/bulk/preview?platform=${activePlatform}&count=${count}`);
+  //     if (!res.ok) throw new Error('Failed to fetch preview');
+  //     const data = await res.json();
+  //     setCompanies(data.companies || []);
+  //   } catch (err) {
+  //     console.error(err);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }, [activePlatform, count]);
+
   const fetchPreview = useCallback(async () => {
-    setLoading(true);
-    setSelected(new Set());
-    try {
-      const res = await fetch(`/api/bulk/preview?platform=${activePlatform}&count=${count}`);
-      if (!res.ok) throw new Error('Failed to fetch preview');
-      const data = await res.json();
-      setCompanies(data.companies || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  setSelected(new Set());
+
+  try {
+    const res = await fetch(
+      `/api/bulk/preview?platform=${activePlatform}&count=${count}`
+    );
+
+    console.log("Status:", res.status);
+    console.log("Content-Type:", res.headers.get("content-type"));
+
+    const text = await res.text();
+
+    console.log(text);
+
+    if (!res.ok) {
+      throw new Error(text);
     }
-  }, [activePlatform, count]);
+
+    const data = JSON.parse(text);
+
+    setCompanies(data.companies || []);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+}, [activePlatform, count]);
 
   useEffect(() => { fetchPreview(); }, [fetchPreview]);
 

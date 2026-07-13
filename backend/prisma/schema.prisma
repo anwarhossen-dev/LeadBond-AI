@@ -17,6 +17,10 @@ model User {
   followups     Followup[]
   captureLogs   CaptureLog[]
   weeklyReports WeeklyReport[]
+  deals         Deal[]
+  campaigns     EmailCampaign[]
+  tasks         CrmTask[]
+  activities    CrmActivity[]
 
   @@map("users")
 }
@@ -32,7 +36,7 @@ model Company {
   capturedBy      String            @map("captured_by") @db.Uuid
   createdAt       DateTime          @default(now()) @map("created_at")
   
-  // New Sourcing & Firmographic properties
+  // Sourcing & Firmographic properties
   companySize     String?           @map("company_size")
   headquarters    String?
   country         String?
@@ -59,6 +63,10 @@ model Company {
   captureLogs     CaptureLog[]
   jobApplications JobApplication[]
   networking      Networking[]
+  deals           Deal[]
+  opportunities   Opportunity[]
+  tasks           CrmTask[]
+  activities      CrmActivity[]
 
   @@map("companies")
 }
@@ -72,12 +80,14 @@ model Contact {
   phone           String
   isDecisionMaker Boolean  @map("is_decision_maker")
   
-  // New CRM Contact Person properties
+  // CRM Contact Person properties
   department      String?
   linkedin        String?
   notes           String?
   
   company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  opportunities   Opportunity[]
+  campaignRecipients CampaignRecipient[]
 
   @@map("contacts")
 }
@@ -125,18 +135,18 @@ model JobApplication {
   experience    String?
   salary        String?
   location      String?
-  workMode      String?        @map("work_mode") // Remote / Hybrid / Onsite
-  jobType       String?        @map("job_type") // Full Time / Contract / Internship
+  workMode      String?        @map("work_mode")
+  jobType       String?        @map("job_type")
   datePosted    DateTime?      @map("date_posted")
   deadline      DateTime?
-  applyMethod   String?        @map("apply_method") // Email / Website / LinkedIn / Referral
+  applyMethod   String?        @map("apply_method")
   applyEmail    String?        @map("apply_email")
   applyLink     String?        @map("apply_link")
   jobLink       String?        @map("job_link")
   description   String?
   requirements  String?
   benefits      String?
-  status        String         @default("Draft") // Draft / Applied / Interview / Offer / Rejected
+  status        String         @default("Draft")
   createdAt     DateTime       @default(now()) @map("created_at")
 
   company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -150,7 +160,7 @@ model JobApplication {
 model Networking {
   id               String    @id @default(uuid()) @db.Uuid
   companyId        String    @map("company_id") @db.Uuid
-  platform         String?   // LinkedIn, Twitter, etc.
+  platform         String?
   profileUrl       String?   @map("profile_url")
   connectionStatus String?   @map("connection_status")
   connectedDate    DateTime? @map("connected_date")
@@ -195,7 +205,7 @@ model Followup {
   userId           String          @map("user_id") @db.Uuid
   note             String
   followUpDate     DateTime        @map("follow_up_date")
-  status           String          // Pending / Completed
+  status           String
 
   companyId        String?         @map("company_id") @db.Uuid
   jobApplicationId String?         @map("job_application_id") @db.Uuid
@@ -240,4 +250,1136 @@ model WeeklyReport {
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("weekly_reports")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  AI SALES CRM — NEW MODELS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Deal {
+  id            String    @id @default(uuid()) @db.Uuid
+  companyId     String    @map("company_id") @db.Uuid
+  title         String
+  value         Decimal   @db.Decimal(12,2)
+  currency      String    @default("USD")
+  stage         String    @default("Discovery")
+  probability   Int       @default(10)
+  expectedClose DateTime? @map("expected_close")
+  assignedTo    String    @map("assigned_to") @db.Uuid
+  notes         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignee      User          @relation(fields: [assignedTo], references: [id])
+  activities    CrmActivity[]
+
+  @@map("deals")
+}
+
+model Opportunity {
+  id              String    @id @default(uuid()) @db.Uuid
+  companyId       String    @map("company_id") @db.Uuid
+  contactId       String?   @map("contact_id") @db.Uuid
+  title           String
+  description     String?
+  expectedRevenue Decimal   @db.Decimal(12,2) @map("expected_revenue")
+  probability     Int       @default(50)
+  status          String    @default("Open")
+  source          String?
+  closeDate       DateTime? @map("close_date")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact         Contact?  @relation(fields: [contactId], references: [id])
+
+  @@map("opportunities")
+}
+
+model EmailCampaign {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String
+  subject      String
+  body         String
+  status       String    @default("Draft")
+  sentAt       DateTime? @map("sent_at")
+  totalSent    Int       @default(0) @map("total_sent")
+  totalOpened  Int       @default(0) @map("total_opened")
+  totalClicked Int       @default(0) @map("total_clicked")
+  createdBy    String    @map("created_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  creator      User      @relation(fields: [createdBy], references: [id])
+  recipients   CampaignRecipient[]
+
+  @@map("email_campaigns")
+}
+
+model CampaignRecipient {
+  id         String    @id @default(uuid()) @db.Uuid
+  campaignId String    @map("campaign_id") @db.Uuid
+  contactId  String    @map("contact_id") @db.Uuid
+  status     String    @default("Pending")
+  sentAt     DateTime? @map("sent_at")
+  openedAt   DateTime? @map("opened_at")
+
+  campaign   EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact    Contact       @relation(fields: [contactId], references: [id])
+
+  @@map("campaign_recipients")
+}
+
+model CrmTask {
+  id          String    @id @default(uuid()) @db.Uuid
+  title       String
+  description String?
+  type        String    @default("Task")
+  priority    String    @default("Medium")
+  status      String    @default("Pending")
+  dueDate     DateTime? @map("due_date")
+  assignedTo  String    @map("assigned_to") @db.Uuid
+  companyId   String?   @map("company_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  assignee    User      @relation(fields: [assignedTo], references: [id])
+  company     Company?  @relation(fields: [companyId], references: [id])
+
+  @@map("crm_tasks")
+}
+
+model CrmActivity {
+  id          String    @id @default(uuid()) @db.Uuid
+  type        String
+  title       String
+  description String?
+  companyId   String?   @map("company_id") @db.Uuid
+  dealId      String?   @map("deal_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  company     Company?  @relation(fields: [companyId], references: [id])
+  deal        Deal?     @relation(fields: [dealId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@map("crm_activities")
+}
+
+
+// new code 
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum UserRole {
+  Admin
+  Manager
+  SalesRep
+  Marketer
+  Analyst
+  Viewer
+}
+
+enum PipelineStage {
+  New
+  Contacted
+  Qualified
+  ProposalSent
+  Negotiation
+  Won
+  Lost
+}
+
+enum DealStage {
+  Discovery
+  ProposalSent
+  Negotiation
+  ContractSent
+  Won
+  Lost
+}
+
+enum OpportunityStatus {
+  Open
+  InProgress
+  Won
+  Lost
+  OnHold
+}
+
+enum TaskStatus {
+  Pending
+  InProgress
+  Completed
+  Cancelled
+}
+
+enum TaskPriority {
+  Low
+  Medium
+  High
+  Urgent
+}
+
+enum CampaignStatus {
+  Draft
+  Scheduled
+  Sending
+  Sent
+  Paused
+}
+
+enum RecipientStatus {
+  Pending
+  Sent
+  Opened
+  Clicked
+  Bounced
+  Unsubscribed
+}
+
+enum RiskLevel {
+  Low
+  Medium
+  High
+}
+
+enum ApplicationStatus {
+  Draft
+  Applied
+  InReview
+  Interview
+  Offer
+  Rejected
+  Withdrawn
+}
+
+enum FollowupStatus {
+  Pending
+  Completed
+  Overdue
+  Cancelled
+}
+
+enum Sentiment {
+  Positive
+  Neutral
+  Negative
+}
+
+// ==========================================
+// 0. TEAMS / ORGANIZATION
+// ==========================================
+
+model Team {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users     User[]
+
+  @@map("teams")
+}
+
+// ==========================================
+// 1. CORE & USER MANAGEMENT
+// ==========================================
+
+model User {
+  id            String          @id @default(uuid()) @db.Uuid
+  fullName      String          @map("full_name")
+  email         String          @unique
+  role          UserRole        @default(SalesRep)
+  teamId        String?         @map("team_id") @db.Uuid
+  joinedAt      DateTime        @default(now()) @map("joined_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  team          Team?           @relation(fields: [teamId], references: [id])
+
+  companies     Company[]
+  followups     Followup[]
+  captureLogs   CaptureLog[]
+  weeklyReports WeeklyReport[]
+  deals         Deal[]
+  campaigns     EmailCampaign[]
+  tasks         CrmTask[]
+  activities    CrmActivity[]
+  savedReports  SavedReport[]
+  jobApplications JobApplication[]
+
+  @@index([teamId])
+  @@map("users")
+}
+
+// ==========================================
+// 2. COMPANY & FIRMOGRAPHICS (Core Platform Anchor)
+// ==========================================
+
+model Company {
+  id             String        @id @default(uuid()) @db.Uuid
+  companyName    String        @map("company_name")
+  industry       String
+  website        String
+  licenseNo      String        @map("license_no")
+  icpMatch       String        @map("icp_match")
+  pipelineStage  PipelineStage @default(New) @map("pipeline_stage")
+  capturedBy     String        @map("captured_by") @db.Uuid
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  deletedAt      DateTime?     @map("deleted_at")
+
+  // Sourcing & Firmographic properties
+  companyType    String   @default("SME") @map("company_type") // Startup, SME, Enterprise, Government
+  businessModel  String   @default("B2B") @map("business_model") // B2B, B2C, D2C, SaaS, Marketplace
+  subIndustry    String?  @map("sub_industry")
+  yearsInBusiness Int?    @map("years_in_business")
+  employeeGrowth Float?   @map("employee_growth")
+  revenueEstimate String? @map("revenue_estimate")
+  fundingStatus  String?  @map("funding_status")
+  branchCount    Int      @default(1) @map("branch_count")
+  marketPresence String?  @map("market_presence")
+
+  // Aggregate AI Scores (Section 1 of spec)
+  digitalPresenceScore Int?  @map("digital_presence_score")
+  websiteQualityScore  Int?  @map("website_quality_score")
+  hiringActivityScore  Int?  @map("hiring_activity_score")
+  expansionScore       Int?  @map("expansion_score")
+  businessRiskScore    Int?  @map("business_risk_score")
+
+  // Basic Info
+  companySize     String?   @map("company_size")
+  headquarters    String?
+  country         String?
+  city            String?
+  phone           String?
+  email           String?
+  linkedin        String?
+  facebook        String?
+  twitter         String?
+  instagram       String?
+  contactPage     String?   @map("contact_page")
+  careerPage      String?   @map("career_page")
+  logo            String?
+  foundedYear     Int?      @map("founded_year")
+  employeesCount  Int?      @map("employees_count")
+  annualRevenue   String?   @map("annual_revenue")
+
+  // Relationships to Intelligence Models
+  capturedByUser        User                   @relation(fields: [capturedBy], references: [id])
+  contacts              Contact[]
+  jobPostings           JobPosting[]
+  leadScores            LeadScore[]
+  pipelineHistory       PipelineHistory[]
+  followups             Followup[]
+  captureLogs           CaptureLog[]
+  jobApplications       JobApplication[]
+  networking            Networking[]
+  deals                 Deal[]
+  opportunities         Opportunity[]
+  tasks                 CrmTask[]
+  activities            CrmActivity[]
+  savedReports          SavedReport[]
+  newsMentions          NewsMention[]
+
+  // New Intelligence Relations
+  productIntelligence   ProductIntelligence?
+  salesIntelligence     SalesIntelligence?
+  growthReport          BusinessGrowthReport?
+  competitorAnalyses    CompetitorAnalysis[]
+  customerAnalysis      CustomerAnalysis?
+  swotAnalysis          SwotAnalysis?
+  financialIntelligence FinancialIntelligence?
+  technologyAnalysis    TechnologyAnalysis?
+  websiteAnalysis       WebsiteAnalysis?
+  marketingIntelligence MarketingIntelligence?
+  riskAnalysis          RiskAnalysis?
+  aiRecommendations     AiRecommendation[]
+  icpProfile            IcpProfile?
+  accountHealth         AccountHealth?
+
+  @@index([capturedBy])
+  @@index([pipelineStage])
+  @@index([industry])
+  @@map("companies")
+}
+
+// ==========================================
+// 2B. ICP MATCHING (Section 9)
+// ==========================================
+
+model IcpProfile {
+  id               String   @id @default(uuid()) @db.Uuid
+  companyId        String   @unique @map("company_id") @db.Uuid
+  matchScore        Int      @map("match_score") // e.g. 95
+  targetIndustry     String   @map("target_industry")
+  targetEmployeeMin  Int?     @map("target_employee_min")
+  targetEmployeeMax  Int?     @map("target_employee_max")
+  targetRevenueMin   Decimal? @db.Decimal(15,2) @map("target_revenue_min")
+  targetCountry      String   @map("target_country")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  company            Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("icp_profiles")
+}
+
+// ==========================================
+// 3. PRODUCT ANALYSIS & PORTFOLIO
+// ==========================================
+
+model ProductIntelligence {
+  id                  String   @id @default(uuid()) @db.Uuid
+  companyId           String   @unique @map("company_id") @db.Uuid
+  productPortfolioScore Float  @map("product_portfolio_score") // e.g., 91%
+  bestCategory        String   @map("best_category")
+  weakCategory        String   @map("weak_category")
+  recommendation      String
+  skuCount            Int      @default(0) @map("sku_count")
+  priceRangeMin       Decimal  @map("price_range_min") @db.Decimal(12,2)
+  priceRangeMax       Decimal  @map("price_range_max") @db.Decimal(12,2)
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  company             Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  products            Product[]
+  services            Service[]
+
+  @@map("product_intelligence")
+}
+
+model Product {
+  id                    String   @id @default(uuid()) @db.Uuid
+  productIntelligenceId String   @map("product_intelligence_id") @db.Uuid
+  name                  String
+  category              String
+  isBestSeller          Boolean  @default(false) @map("is_best_seller")
+  isPremium             Boolean  @default(false) @map("is_premium")
+  isNewLaunch           Boolean  @default(false) @map("is_new_launch")
+  availability          String   @default("In Stock")
+  rating                Float    @default(0.0)
+  reviewsCount          Int      @default(0) @map("reviews_count")
+  growthRate            Float    @default(0.0) @map("growth_rate")
+  demandLevel           String   @default("Medium") @map("demand_level") // High, Medium, Low
+  weakness              String?
+
+  productIntelligence   ProductIntelligence @relation(fields: [productIntelligenceId], references: [id], onDelete: Cascade)
+
+  @@index([productIntelligenceId])
+  @@map("products")
+}
+
+// Section 2 explicitly separates Products from Services
+model Service {
+  id                    String   @id @default(uuid()) @db.Uuid
+  productIntelligenceId String   @map("product_intelligence_id") @db.Uuid
+  name                  String
+  category              String
+  isPremium             Boolean  @default(false) @map("is_premium")
+  isNewLaunch           Boolean  @default(false) @map("is_new_launch")
+  pricingModel          String?  @map("pricing_model") // Hourly, Subscription, Fixed
+  rating                Float    @default(0.0)
+  demandLevel           String   @default("Medium") @map("demand_level")
+
+  productIntelligence   ProductIntelligence @relation(fields: [productIntelligenceId], references: [id], onDelete: Cascade)
+
+  @@index([productIntelligenceId])
+  @@map("services")
+}
+
+// ==========================================
+// 4. SALES INTELLIGENCE & FORECASTING
+// ==========================================
+
+model SalesIntelligence {
+  id                    String   @id @default(uuid()) @db.Uuid
+  companyId             String   @unique @map("company_id") @db.Uuid
+  estimatedMonthlyRevenue Decimal @db.Decimal(15,2) @map("estimated_monthly_revenue")
+  estimatedAnnualRevenue  Decimal @db.Decimal(15,2) @map("estimated_annual_revenue")
+  salesGrowthPct        Float    @map("sales_growth_pct")
+  salesDeclinePct       Float    @default(0.0) @map("sales_decline_pct")
+  revenueTrend          String   @map("revenue_trend") // Upward, Stable, Downward
+  seasonalSales         String?  @map("seasonal_sales")
+  repeatCustomerRate    Float    @map("repeat_customer_rate")
+  conversionRate        Float    @map("conversion_rate")
+  averageOrderValue     Decimal  @db.Decimal(12,2) @map("average_order_value")
+  customerLifetimeValue Decimal  @db.Decimal(12,2) @map("customer_lifetime_value")
+  leadConversion        Float    @map("lead_conversion")
+  salesVelocity         Float    @map("sales_velocity")
+
+  // Charts Data (Stored as structured JSON or breakdown arrays)
+  monthlySalesData      Json?    @map("monthly_sales_data")
+  quarterlySalesData    Json?    @map("quarterly_sales_data")
+  yearlySalesData       Json?    @map("yearly_sales_data")
+
+  // AI Forecasting
+  forecast30Days        Decimal? @db.Decimal(15,2) @map("forecast_30_days")
+  forecast60Days        Decimal? @db.Decimal(15,2) @map("forecast_60_days")
+  forecast90Days        Decimal? @db.Decimal(15,2) @map("forecast_90_days")
+  forecast365Days       Decimal? @db.Decimal(15,2) @map("forecast_365_days")
+
+  company               Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("sales_intelligence")
+}
+
+// ==========================================
+// 5. BUSINESS GROWTH REPORT
+// ==========================================
+
+model BusinessGrowthReport {
+  id                 String   @id @default(uuid()) @db.Uuid
+  companyId          String   @unique @map("company_id") @db.Uuid
+  growthScore        Int      @map("growth_score")     // e.g., 82
+  financeScore       Int      @map("finance_score")    // e.g., 74
+  marketingScore     Int      @map("marketing_score")  // e.g., 90
+  technologyScore    Int      @map("technology_score") // e.g., 95
+  overallHealthScore Int      @map("overall_health_score") // e.g., 89
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  company            Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("business_growth_reports")
+}
+
+// ==========================================
+// 5B. ACCOUNT HEALTH (AI Account Health Score)
+// ==========================================
+
+model AccountHealth {
+  id              String   @id @default(uuid()) @db.Uuid
+  companyId       String   @unique @map("company_id") @db.Uuid
+  healthScore     Int      @map("health_score") // 0-100
+  engagementTrend String?  @map("engagement_trend") // Improving, Stable, Declining
+  riskFlags       String[] @map("risk_flags")
+  lastActivityAt  DateTime? @map("last_activity_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("account_health")
+}
+
+// ==========================================
+// 6. GLOBAL MARKET TRENDS
+// ==========================================
+
+model MarketTrend {
+  id          String   @id @default(uuid()) @db.Uuid
+  sectorName  String   @map("sector_name") // e.g., AI Software, Cyber Security, EV, DVD
+  trendType   String   @map("trend_type")   // Growing, Declining
+  confidence  Float    @default(100.0)
+  detectedAt  DateTime @default(now()) @map("detected_at")
+
+  @@index([sectorName])
+  @@map("market_trends")
+}
+
+// ==========================================
+// 7. COMPETITOR ANALYSIS
+// ==========================================
+
+model CompetitorAnalysis {
+  id                  String   @id @default(uuid()) @db.Uuid
+  companyId           String   @map("company_id") @db.Uuid
+  competitorName      String   @map("competitor_name")
+  competitorWebsite   String?  @map("competitor_website")
+
+  // Direct Metrics Comparison
+  compRevenue         String?  @map("comp_revenue")
+  compEmployees       Int?     @map("comp_employees")
+  compProductsCount   Int?     @map("comp_products_count")
+  compMarketShare     Float?   @map("comp_market_share")
+  compPricingStrategy String?  @map("comp_pricing_strategy")
+
+  aiRecommendation    String?  @map("ai_recommendation")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  company             Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  alerts              CompetitorAlert[]
+
+  @@index([companyId])
+  @@map("competitor_analyses")
+}
+
+// AI Competitor Monitoring: change/alert history over time
+model CompetitorAlert {
+  id                   String   @id @default(uuid()) @db.Uuid
+  competitorAnalysisId String   @map("competitor_analysis_id") @db.Uuid
+  changeType           String   @map("change_type") // Hiring Surge, Price Change, New Product, Funding
+  message              String
+  detectedAt           DateTime @default(now()) @map("detected_at")
+
+  competitorAnalysis   CompetitorAnalysis @relation(fields: [competitorAnalysisId], references: [id], onDelete: Cascade)
+
+  @@index([competitorAnalysisId])
+  @@map("competitor_alerts")
+}
+
+// ==========================================
+// 8. CUSTOMER & ICP TARGETING
+// ==========================================
+
+model CustomerAnalysis {
+  id                String   @id @default(uuid()) @db.Uuid
+  companyId         String   @unique @map("company_id") @db.Uuid
+  targetAudience    String   @map("target_audience")
+  customerSegment   String   @map("customer_segment")
+  primaryCountry    String   @map("primary_country")
+  genderDemographic String?  @map("gender_demographic")
+  ageGroup          String?  @map("age_group")
+  incomeLevel       String?  @map("income_level")
+  buyingBehavior    String?  @map("buying_behavior")
+  engagementScore   Int      @map("engagement_score")
+  churnRate         Float    @map("churn_rate")
+  predictedChurnRate Float?  @map("predicted_churn_rate") // AI Churn Prediction
+  loyaltyScore      Int      @map("loyalty_score")
+
+  company           Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("customer_analyses")
+}
+
+// ==========================================
+// 9. SWOT ANALYSIS
+// ==========================================
+
+model SwotAnalysis {
+  id            String   @id @default(uuid()) @db.Uuid
+  companyId     String   @unique @map("company_id") @db.Uuid
+  strengths     String[] // Array representation of bullet points
+  weaknesses    String[]
+  opportunities String[]
+  threats       String[]
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("swot_analyses")
+}
+
+// ==========================================
+// 10. FINANCIAL INTELLIGENCE
+// ==========================================
+
+model FinancialIntelligence {
+  id            String   @id @default(uuid()) @db.Uuid
+  companyId     String   @unique @map("company_id") @db.Uuid
+  revenue       Decimal  @db.Decimal(15,2)
+  profit        Decimal  @db.Decimal(15,2)
+  expenses      Decimal  @db.Decimal(15,2)
+  ebitda        Decimal  @db.Decimal(15,2)
+  cashFlow      Decimal  @db.Decimal(15,2) @map("cash_flow")
+  fundingTotal  Decimal  @default(0.0) @db.Decimal(15,2) @map("funding_total")
+  investors     String[]
+  growthRate    Float    @map("growth_rate")
+  burnRate      Decimal? @db.Decimal(15,2) @map("burn_rate")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("financial_intelligence")
+}
+
+// ==========================================
+// 11. TECHNOLOGY STACK ANALYSIS
+// ==========================================
+
+model TechnologyAnalysis {
+  id            String   @id @default(uuid()) @db.Uuid
+  companyId     String   @unique @map("company_id") @db.Uuid
+  languages     String[] // PHP, Node.js etc.
+  frameworks    String[] // React, Next.js, Laravel, ASP.NET
+  cloudProviders String[] @map("cloud_providers") // AWS, Azure, GCP
+  devOps        String[] // Docker, Kubernetes
+  security      String[] // Cloudflare
+  eCommerce     String[] @map("e_commerce") // Shopify
+  paymentGateways String[] @map("payment_gateways") // Stripe
+  detectedAt    DateTime @default(now()) @map("detected_at")
+
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("technology_analyses")
+}
+
+// ==========================================
+// 12. WEBSITE INFRASTRUCTURE SCAN
+// ==========================================
+
+model WebsiteAnalysis {
+  id              String   @id @default(uuid()) @db.Uuid
+  companyId       String   @unique @map("company_id") @db.Uuid
+  performance     Int
+  seoScore        Int      @map("seo_score")
+  mobileFriendly  Boolean  @map("mobile_friendly")
+  accessibility   Int
+  sslActive       Boolean  @map("ssl_active")
+  domainAgeYears  Float    @map("domain_age_years")
+  securityHeaders String[] @map("security_headers")
+  pageSpeedMs     Int      @map("page_speed_ms")
+  lighthouseScore Int      @map("lighthouse_score")
+  scannedAt       DateTime @default(now()) @map("scanned_at")
+
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("website_analyses")
+}
+
+// ==========================================
+// 13. MARKETING INTELLIGENCE & ADS
+// ==========================================
+
+model MarketingIntelligence {
+  id                String   @id @default(uuid()) @db.Uuid
+  companyId         String   @unique @map("company_id") @db.Uuid
+  seoScore          Int      @map("seo_score")
+  backlinksCount    Int      @map("backlinks_count")
+  organicTraffic    Int      @map("organic_traffic")
+  hasPaidAds        Boolean  @map("has_paid_ads")
+  activeChannels    String[] // Google Ads, Facebook Ads, LinkedIn Campaigns
+  socialEngagement  String?  @map("social_engagement") // High, Medium, Low
+  emailMarketingScore Int    @map("email_marketing_score")
+  brandMentionsCount Int     @map("brand_mentions_count")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  company           Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("marketing_intelligence")
+}
+
+// ==========================================
+// 13B. NEWS MONITORING & SENTIMENT (AI News Monitoring / Sentiment Analysis)
+// ==========================================
+
+model NewsMention {
+  id          String    @id @default(uuid()) @db.Uuid
+  companyId   String    @map("company_id") @db.Uuid
+  headline    String
+  source      String
+  url         String?
+  sentiment   Sentiment @default(Neutral)
+  publishedAt DateTime  @map("published_at")
+  detectedAt  DateTime  @default(now()) @map("detected_at")
+
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([sentiment])
+  @@map("news_mentions")
+}
+
+// ==========================================
+// 14. RISK MATRIX
+// ==========================================
+
+model RiskAnalysis {
+  id              String    @id @default(uuid()) @db.Uuid
+  companyId       String    @unique @map("company_id") @db.Uuid
+  bankruptcyRisk  RiskLevel @default(Low) @map("bankruptcy_risk")
+  financialRisk   RiskLevel @default(Low) @map("financial_risk")
+  hiringRisk      RiskLevel @default(Low) @map("hiring_risk")
+  complianceRisk  RiskLevel @default(Low) @map("compliance_risk")
+  cyberRisk       RiskLevel @default(Low) @map("cyber_risk")
+  marketRisk      RiskLevel @default(Low) @map("market_risk")
+  overallRiskScore Int      @map("overall_risk_score")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("risk_analyses")
+}
+
+// ==========================================
+// 15. AI RECOMMENDATION ENGINE & OPPORTUNITIES
+// ==========================================
+
+model AiRecommendation {
+  id                String   @id @default(uuid()) @db.Uuid
+  companyId         String   @map("company_id") @db.Uuid
+  hiringGrowthPulse String?  @map("hiring_growth_pulse") // e.g., "Increased hiring by 42%"
+  revenueGrowthPulse String? @map("revenue_growth_pulse") // e.g., "Estimated to grow 25%"
+  suitableSolution  String   @map("suitable_solution") // e.g., Enterprise CRM
+  recommendedProduct String  @map("recommended_product") // e.g., LeadBond HRMS
+  nextBestAction    String?  @map("next_best_action") // AI Next Best Action
+  confidenceScore   Int      @map("confidence_score") // e.g., 94
+  opportunityMatrix Json?    @map("opportunity_matrix") // { ERP: 'High', CRM: 'High', Accounting: 'Low' }
+  generatedAt       DateTime @default(now()) @map("generated_at")
+
+  company           Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("ai_recommendations")
+}
+
+// ==========================================
+// 16. REPORTS & EXPORTS LOGS
+// ==========================================
+
+model SavedReport {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  companyId   String?  @map("company_id") @db.Uuid
+  reportType  String   @map("report_type") // BusinessAnalysis, SWOT, Competitor, Financial etc.
+  format      String   // PDF, Excel, PowerPoint
+  generatedAt DateTime @default(now()) @map("generated_at")
+  downloadUrl String   @map("download_url")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([companyId])
+  @@map("saved_reports")
+}
+
+// ==========================================
+// EXISTING MODELS (Maintained and Integrated)
+// ==========================================
+
+model Contact {
+  id              String   @id @default(uuid()) @db.Uuid
+  companyId       String   @map("company_id") @db.Uuid
+  name            String
+  designation     String
+  email           String
+  phone           String
+  isDecisionMaker Boolean  @map("is_decision_maker")
+
+  department      String?
+  linkedin        String?
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  opportunities      Opportunity[]
+  campaignRecipients CampaignRecipient[]
+
+  @@index([companyId])
+  @@map("contacts")
+}
+
+model JobPosting {
+  id               String   @id @default(uuid()) @db.Uuid
+  companyId        String   @map("company_id") @db.Uuid
+  jobTitle         String   @map("job_title")
+  platform         String
+  postedDate       DateTime @map("posted_date")
+  hiringSignalType String   @map("hiring_signal_type")
+
+  // Advanced Hiring Intelligence Fields
+  salaryRange      String?  @map("salary_range")
+  skillDemand      String[] @map("skill_demand")
+  department       String?
+  isRemote         Boolean  @default(false) @map("is_remote")
+
+  company          Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("job_postings")
+}
+
+model LeadScore {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @map("company_id") @db.Uuid
+  aiScore      Int      @map("ai_score")
+  scoreReasons String[] @map("score_reasons") // e.g., Recently hiring, Revenue growing, New office
+  scoredAt     DateTime @default(now()) @map("scored_at")
+
+  isHotLead   Boolean  @default(false) @map("is_hot_lead")
+
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("lead_scores")
+}
+
+model PipelineHistory {
+  id        String        @id @default(uuid()) @db.Uuid
+  companyId String        @map("company_id") @db.Uuid
+  fromStage PipelineStage @map("from_stage")
+  toStage   PipelineStage @map("to_stage")
+  changedAt DateTime      @default(now()) @map("changed_at")
+  company   Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("pipeline_histories")
+}
+
+model JobApplication {
+  id               String        @id @default(uuid()) @db.Uuid
+  companyId        String        @map("company_id") @db.Uuid
+  ownerId          String?       @map("owner_id") @db.Uuid
+  jobTitle         String        @map("job_title")
+  position         String?
+  department       String?
+  experience       String?
+  salary           String?
+  location         String?
+  workMode         String?       @map("work_mode")
+  jobType          String?       @map("job_type")
+  datePosted       DateTime?     @map("date_posted")
+  deadline         DateTime?
+  applyMethod      String?       @map("apply_method")
+  applyEmail       String?       @map("apply_email")
+  applyLink        String?       @map("apply_link")
+  jobLink          String?       @map("job_link")
+  description      String?
+  requirements     String?
+  benefits         String?
+  status           ApplicationStatus @default(Draft)
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  company          Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  owner            User?         @relation(fields: [ownerId], references: [id])
+  histories        JobHistory[]
+  documents        Document[]
+  followups        Followup[]
+
+  @@index([companyId])
+  @@index([ownerId])
+  @@map("job_applications")
+}
+
+model Networking {
+  id               String    @id @default(uuid()) @db.Uuid
+  companyId        String    @map("company_id") @db.Uuid
+  platform         String?
+  profileUrl       String?   @map("profile_url")
+  connectionStatus String?   @map("connection_status")
+  connectedDate    DateTime? @map("connected_date")
+  lastMessage      String?   @map("last_message")
+  nextFollowup     DateTime? @map("next_followup")
+  notes            String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  company          Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("networking")
+}
+
+model JobHistory {
+  id               String         @id @default(uuid()) @db.Uuid
+  jobApplicationId String         @map("job_application_id") @db.Uuid
+  status           String
+  remarks          String?
+  updatedBy        String?        @map("updated_by")
+  updatedAt        DateTime       @default(now()) @map("updated_at")
+
+  jobApplication   JobApplication @relation(fields: [jobApplicationId], references: [id], onDelete: Cascade)
+
+  @@index([jobApplicationId])
+  @@map("job_histories")
+}
+
+model Document {
+  id               String         @id @default(uuid()) @db.Uuid
+  jobApplicationId String         @map("job_application_id") @db.Uuid
+  resume           String?
+  coverLetter      String?        @map("cover_letter")
+  proposal         String?
+  portfolio        String?
+  other            String?
+
+  jobApplication   JobApplication @relation(fields: [jobApplicationId], references: [id], onDelete: Cascade)
+
+  @@index([jobApplicationId])
+  @@map("documents")
+}
+
+model Followup {
+  id               String          @id @default(uuid()) @db.Uuid
+  userId           String          @map("user_id") @db.Uuid
+  note             String
+  followUpDate     DateTime        @map("follow_up_date")
+  status           FollowupStatus  @default(Pending)
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  companyId        String?         @map("company_id") @db.Uuid
+  jobApplicationId String?         @map("job_application_id") @db.Uuid
+
+  company          Company?        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  jobApplication   JobApplication? @relation(fields: [jobApplicationId], references: [id], onDelete: Cascade)
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([jobApplicationId])
+  @@index([userId])
+  @@map("followups")
+}
+
+model CaptureLog {
+  id             String         @id @default(uuid()) @db.Uuid
+  companyId      String         @map("company_id") @db.Uuid
+  userId         String         @map("user_id") @db.Uuid
+  sourceId       String         @map("source_id") @db.Uuid
+  capturedAt     DateTime       @default(now()) @map("captured_at")
+  rawDataUrl     String         @map("raw_data_url")
+  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourcePlatform SourcePlatform @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([userId])
+  @@map("capture_logs")
+}
+
+model SourcePlatform {
+  id           String       @id @default(uuid()) @db.Uuid
+  platformName String       @map("platform_name")
+  platformType String       @map("platform_type")
+  captureLogs  CaptureLog[]
+
+  @@map("source_platforms")
+}
+
+model WeeklyReport {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  weekStart      DateTime @map("week_start")
+  leadsCaptured  Int      @map("leads_captured")
+  leadsQualified Int      @map("leads_qualified")
+  followupsDone  Int      @map("followups_done")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("weekly_reports")
+}
+
+model Deal {
+  id            String    @id @default(uuid()) @db.Uuid
+  companyId     String    @map("company_id") @db.Uuid
+  title         String
+  value         Decimal   @db.Decimal(12,2)
+  currency      String    @default("USD")
+  stage         DealStage @default(Discovery)
+  probability   Int       @default(10)
+  expectedClose DateTime? @map("expected_close")
+  assignedTo    String    @map("assigned_to") @db.Uuid
+  notes         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignee      User          @relation(fields: [assignedTo], references: [id])
+  activities    CrmActivity[]
+
+  @@index([companyId])
+  @@index([assignedTo])
+  @@index([stage])
+  @@map("deals")
+}
+
+model Opportunity {
+  id              String            @id @default(uuid()) @db.Uuid
+  companyId       String            @map("company_id") @db.Uuid
+  contactId       String?           @map("contact_id") @db.Uuid
+  title           String
+  description     String?
+  expectedRevenue Decimal           @db.Decimal(12,2) @map("expected_revenue")
+  probability     Int               @default(50)
+  status          OpportunityStatus @default(Open)
+  source          String?
+  closeDate       DateTime?         @map("close_date")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact         Contact?  @relation(fields: [contactId], references: [id])
+
+  @@index([companyId])
+  @@index([contactId])
+  @@map("opportunities")
+}
+
+model EmailCampaign {
+  id           String              @id @default(uuid()) @db.Uuid
+  name         String
+  subject      String
+  body         String
+  status       CampaignStatus      @default(Draft)
+  sentAt       DateTime?           @map("sent_at")
+  totalSent    Int                 @default(0) @map("total_sent")
+  totalOpened  Int                 @default(0) @map("total_opened")
+  totalClicked Int                 @default(0) @map("total_clicked")
+  createdBy    String              @map("created_by") @db.Uuid
+  createdAt    DateTime            @default(now()) @map("created_at")
+
+  creator      User                @relation(fields: [createdBy], references: [id])
+  recipients   CampaignRecipient[]
+
+  @@index([createdBy])
+  @@map("email_campaigns")
+}
+
+model CampaignRecipient {
+  id         String           @id @default(uuid()) @db.Uuid
+  campaignId String           @map("campaign_id") @db.Uuid
+  contactId  String           @map("contact_id") @db.Uuid
+  status     RecipientStatus  @default(Pending)
+  sentAt     DateTime?        @map("sent_at")
+  openedAt   DateTime?        @map("opened_at")
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  campaign   EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact    Contact       @relation(fields: [contactId], references: [id])
+
+  @@index([campaignId])
+  @@index([contactId])
+  @@map("campaign_recipients")
+}
+
+model CrmTask {
+  id          String       @id @default(uuid()) @db.Uuid
+  title       String
+  description String?
+  type        String       @default("Task")
+  priority    TaskPriority @default(Medium)
+  status      TaskStatus   @default(Pending)
+  dueDate     DateTime?    @map("due_date")
+  assignedTo  String       @map("assigned_to") @db.Uuid
+  companyId   String?      @map("company_id") @db.Uuid
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  assignee    User      @relation(fields: [assignedTo], references: [id])
+  company     Company?  @relation(fields: [companyId], references: [id])
+
+  @@index([assignedTo])
+  @@index([companyId])
+  @@index([status])
+  @@map("crm_tasks")
+}
+
+model CrmActivity {
+  id          String   @id @default(uuid()) @db.Uuid
+  type        String
+  title       String
+  description String?
+  companyId   String?  @map("company_id") @db.Uuid
+  dealId      String?  @map("deal_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  company     Company? @relation(fields: [companyId], references: [id])
+  deal        Deal?    @relation(fields: [dealId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([companyId])
+  @@index([dealId])
+  @@index([userId])
+  @@map("crm_activities")
 }
