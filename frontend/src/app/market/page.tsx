@@ -254,8 +254,8 @@ export default function MarketPage() {
             <h3 style={{ fontWeight: 700, marginBottom: '4px' }}>📰 Weekly Market Report</h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '20px' }}>Week of {weekly.weekOf}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {weekly.headlines?.map((h: any, i: number) => (
-                <div key={i} style={{ padding: '14px 18px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', borderLeft: `3px solid ${h.sentiment === 'Positive' ? '#10b981' : '#ef4444'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              {weekly.headlines?.map((h: any, index: number) => (
+                <div key={`${h.event}-${index}`} style={{ padding: '14px 18px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', borderLeft: `3px solid ${h.sentiment === 'Positive' ? '#10b981' : '#ef4444'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                   <div>
                     <span style={{ background: 'rgba(0,242,254,0.08)', color: '#00f2fe', borderRadius: '6px', padding: '2px 8px', fontSize: '0.72rem', marginRight: '10px' }}>{h.sector}</span>
                     <span style={{ fontSize: '0.88rem' }}>{h.event}</span>
@@ -273,8 +273,13 @@ export default function MarketPage() {
             ].map(s => (
               <div key={s.title} className="glass-panel" style={{ padding: '20px' }}>
                 <h4 style={{ fontWeight: 700, marginBottom: '12px', color: s.color }}>{s.title}</h4>
-                {s.items?.map((item: string) => (
-                  <div key={item} style={{ padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: '0.87rem' }}>• {item}</div>
+                {s.items?.map((item: any, index: number) => (
+                  <div 
+                    key={typeof item === 'object' ? `${item.name}-${index}` : `${item}-${index}`} 
+                    style={{ padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: '0.87rem' }}
+                  >
+                    • {typeof item === 'object' ? item.name : item}
+                  </div>
                 ))}
               </div>
             ))}

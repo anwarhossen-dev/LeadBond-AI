@@ -39,6 +39,50 @@ interface ImportSummary {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  Reducer State & Actions
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface BulkCollectionState {
+  activePlatform: string;
+  count: number;
+  companies: Company[];
+  filteredCompanies: Company[];
+  selected: Set<string>;
+  searchQuery: string;
+  loading: boolean;
+  importing: boolean;
+  showModal: boolean;
+  importLog: LogEntry[];
+  importProgress: number;
+  importDone: boolean;
+  importSummary: ImportSummary | null;
+  importError: string | null;
+}
+
+type BulkCollectionAction =
+  | { type: 'SET_ACTIVE_PLATFORM'; payload: string }
+  | { type: 'SET_COUNT'; payload: number }
+  | { type: 'FETCH_PREVIEW_START' }
+  | { type: 'FETCH_PREVIEW_SUCCESS'; payload: Company[] }
+  | { type: 'FETCH_PREVIEW_ERROR' }
+  | { type: 'SET_SEARCH_QUERY'; payload: string }
+  | { type: 'SET_FILTERED_COMPANIES'; payload: Company[] }
+  | { type: 'TOGGLE_SELECT'; payload: string }
+  | { type: 'SELECT_ALL'; payload: Company[] }
+  | { type: 'CLEAR_ALL' }
+  | { type: 'RUN_IMPORT_START' }
+  | { type: 'ADD_IMPORT_LOG'; payload: LogEntry }
+  | { type: 'SET_IMPORT_PROGRESS'; payload: number }
+  | { type: 'SET_IMPORT_SUMMARY'; payload: ImportSummary | null }
+  | { type: 'SET_IMPORT_ERROR'; payload: string | null }
+  | { type: 'FINISH_IMPORT' }
+  | { type: 'CLOSE_MODAL' };
+
+const initialState: BulkCollectionState = {
+  activePlatform: 'linkedin', count: 20, companies: [], filteredCompanies: [], selected: new Set(), searchQuery: '', loading: false, importing: false, showModal: false, importLog: [], importProgress: 0, importDone: false, importSummary: null, importError: null,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  Platform config
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -54,30 +98,58 @@ const PLATFORMS = [
 //  Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function BulkCollectionPage() {
-  const [activePlatform, setActivePlatform]   = useState('linkedin');
-  const [count, setCount]                     = useState(20);
-  const [companies, setCompanies]             = useState<Company[]>([]);
-  const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
-  const [selected, setSelected]               = useState<Set<string>>(new Set());
-  const [searchQuery, setSearchQuery]         = useState('');
-  const [loading, setLoading]                 = useState(false);
+function bulkCollectionReducer(state: BulkCollectionState, action: BulkCollectionAction): BulkCollectionState {
+  switch (action.type) {
+    case 'SET_ACTIVE_PLATFORM': return { ...state, activePlatform: action.payload };
+    case 'SET_COUNT': return { ...state, count: action.payload };
+    case 'FETCH_PREVIEW_START': return { ...state, loading: true, selected: new Set() };
+    case 'FETCH_PREVIEW_SUCCESS': return { ...state, companies: action.payload, loading: false };
+    case 'FETCH_PREVIEW_ERROR': return { ...state, companies: [], loading: false };
+    case 'SET_SEARCH_QUERY': return { ...state, searchQuery: action.payload };
+    case 'SET_FILTERED_COMPANIES': return { ...state, filteredCompanies: action.payload };
+    case 'TOGGLE_SELECT': {
+      const newSelected = new Set(state.selected);
+      newSelected.has(action.payload) ? newSelected.delete(action.payload) : newSelected.add(action.payload);
+      return { ...state, selected: newSelected };
+    }
+    case 'SELECT_ALL': return { ...state, selected: new Set(action.payload.map(c => c.previewId)) };
+    case 'CLEAR_ALL': return { ...state, selected: new Set() };
+    case 'RUN_IMPORT_START': return { ...state, showModal: true, importing: true, importDone: false, importLog: [], importProgress: 0, importSummary: null, importError: null };
+    case 'ADD_IMPORT_LOG': return { ...state, importLog: [action.payload, ...state.importLog] };
+    case 'SET_IMPORT_PROGRESS': return { ...state, importProgress: action.payload };
+    case 'SET_IMPORT_SUMMARY': return { ...state, importSummary: action.payload };
+    case 'SET_IMPORT_ERROR': return { ...state, importError: action.payload };
+    case 'FINISH_IMPORT': return { ...state, importDone: true, importing: false };
+    case 'CLOSE_MODAL': return { ...state, showModal: false };
+    default: return state;
+  }
+}
 
-  // Modal / import state
-  const [importing, setImporting]             = useState(false);
-  const [showModal, setShowModal]             = useState(false);
-  const [importLog, setImportLog]             = useState<LogEntry[]>([]);
-  const [importProgress, setImportProgress]   = useState(0);
-  const [importDone, setImportDone]           = useState(false);
-  const [importSummary, setImportSummary]     = useState<ImportSummary | null>(null);
+export default function BulkCollectionPage() {
+  const [state, dispatch] = useReducer(bulkCollectionReducer, initialState);
+  const {
+    activePlatform,
+    count,
+    companies,
+    filteredCompanies,
+    selected,
+    searchQuery,
+    loading,
+    importing,
+    showModal,
+    importLog,
+    importProgress,
+    importDone,
+    importSummary,
+    importError,
+  } = state;
 
   // // ── Fetch preview whenever platform or count changes ──
   const fetchPreview = useCallback(async () => {
-    setLoading(true);
-    setSelected(new Set());
+    dispatch({ type: 'FETCH_PREVIEW_START' });
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const res = await fetch(`${apiUrl}/bulk/preview?platform=${activePlatform}&count=${count}`);
+      const res = await fetch(`${apiUrl}/bulk/preview?platform=${state.activePlatform}&count=${state.count}`);
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(`Failed to fetch preview: ${res.status} ${errorText}`);
@@ -87,49 +159,46 @@ export default function BulkCollectionPage() {
       
       // Ensure that we are setting an array, even if API returns something else.
       if (data && Array.isArray(data.companies)) {
-        setCompanies(data.companies);
+        // Ensure previewId is a string to prevent key errors.
+        const sanitizedCompanies = data.companies.map((c: any) => ({
+          ...c,
+          previewId: String(c.previewId),
+        }));
+        dispatch({ type: 'FETCH_PREVIEW_SUCCESS', payload: sanitizedCompanies });
       } else {
         console.warn("API did not return a 'companies' array.", data);
-        setCompanies([]);
+        dispatch({ type: 'FETCH_PREVIEW_ERROR' });
       }
     } catch (err) {
       console.error("Error in fetchPreview:", err);
-      setCompanies([]); // Ensure companies is an array on error
-    } finally {
-      setLoading(false);
+      dispatch({ type: 'FETCH_PREVIEW_ERROR' });
     }
-  }, [activePlatform, count]);
+  }, [state.activePlatform, state.count]);
 
   useEffect(() => { fetchPreview(); }, [fetchPreview]);
 
   // ── Filter by search query ──
   useEffect(() => {
     if (!searchQuery.trim()) {
-      setFilteredCompanies(companies);
+      dispatch({ type: 'SET_FILTERED_COMPANIES', payload: companies });
     } else {
       const q = searchQuery.toLowerCase();
-      setFilteredCompanies(
+      dispatch({ type: 'SET_FILTERED_COMPANIES', payload:
         companies.filter(
           (c) =>
             c.companyName.toLowerCase().includes(q) ||
             c.industry.toLowerCase().includes(q) ||
             c.headquarters.toLowerCase().includes(q)
         )
-      );
+      });
     }
   }, [companies, searchQuery]);
 
   // ── Toggle card selection ──
-  const toggleSelect = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
+  const toggleSelect = (id: string) => dispatch({ type: 'TOGGLE_SELECT', payload: id });
 
-  const selectAll  = () => setSelected(new Set(filteredCompanies.map((c) => c.previewId)));
-  const clearAll   = () => setSelected(new Set());
+  const selectAll  = () => dispatch({ type: 'SELECT_ALL', payload: filteredCompanies });
+  const clearAll   = () => dispatch({ type: 'CLEAR_ALL' });
 
   // ── Run Import ──
   const runImport = async () => {
@@ -139,24 +208,18 @@ export default function BulkCollectionPage() {
 
     if (toImport.length === 0) return;
 
-    // Open modal and reset
-    setShowModal(true);
-    setImporting(true);
-    setImportDone(false);
-    setImportLog([]);
-    setImportProgress(0);
-    setImportSummary(null);
+    dispatch({ type: 'RUN_IMPORT_START' });
 
     // Simulate per-company progress (real import happens in bulk, but we animate it)
     const simulationDelay = Math.max(200, Math.floor(3000 / toImport.length));
     for (let i = 0; i < toImport.length; i++) {
       await new Promise((r) => setTimeout(r, simulationDelay));
       const c = toImport[i];
-      setImportLog((prev) => [
-        { id: c.previewId, companyName: c.companyName, jobTitle: c.jobTitle, status: 'success' },
-        ...prev,
-      ]);
-      setImportProgress(Math.round(((i + 1) / toImport.length) * 100));
+      dispatch({
+        type: 'ADD_IMPORT_LOG',
+        payload: { id: `${c.previewId}-${Date.now()}`, companyName: c.companyName, jobTitle: c.jobTitle, status: 'success' }
+      });
+      dispatch({ type: 'SET_IMPORT_PROGRESS', payload: Math.round(((i + 1) / toImport.length) * 100) });
     }
 
     // Actual API call
@@ -170,19 +233,24 @@ export default function BulkCollectionPage() {
           count: toImport.length,
         }),
       });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: 'An unknown error occurred during import.' }));
+        throw new Error(errorData.message || `HTTP error! status: ${res.status}`);
+      }
+
       const data = await res.json();
-      if (data.summary) setImportSummary(data.summary);
+      if (data.summary) dispatch({ type: 'SET_IMPORT_SUMMARY', payload: data.summary });
     } catch (err) {
-      console.error('Import error:', err);
+      dispatch({ type: 'SET_IMPORT_ERROR', payload: err instanceof Error ? err.message : 'An unexpected error occurred.' });
     }
 
-    setImportDone(true);
-    setImporting(false);
+    dispatch({ type: 'FINISH_IMPORT' });
   };
 
   const closeModal = () => {
     if (!importing) {
-      setShowModal(false);
+      dispatch({ type: 'CLOSE_MODAL' });
       fetchPreview(); // Refresh after import
     }
   };
@@ -225,7 +293,7 @@ export default function BulkCollectionPage() {
             key={p.key}
             id={`tab-${p.key}`}
             className={`${styles.platformTab} ${activePlatform === p.key ? styles.platformTabActive : ''}`}
-            onClick={() => setActivePlatform(p.key)}
+            onClick={() => dispatch({ type: 'SET_ACTIVE_PLATFORM', payload: p.key })}
           >
             <span className={styles.platformIcon}>{p.icon}</span>
             {p.label}
@@ -249,7 +317,7 @@ export default function BulkCollectionPage() {
             value={count}
             className={styles.slider}
             style={{ '--progress': sliderProgress } as React.CSSProperties}
-            onChange={(e) => setCount(Number(e.target.value))}
+            onChange={(e) => dispatch({ type: 'SET_COUNT', payload: Number(e.target.value) })}
           />
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
             <span>১০</span><span>৫০</span>
@@ -263,7 +331,7 @@ export default function BulkCollectionPage() {
             placeholder="🔍  কোম্পানি/ইন্ডাস্ট্রি খুঁজুন…"
             className={styles.searchBox}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => dispatch({ type: 'SET_SEARCH_QUERY', payload: e.target.value })}
           />
           <button className={styles.btnSelectAll} onClick={fetchPreview} id="btn-refresh">
             🔄 রিফ্রেশ
@@ -348,7 +416,7 @@ export default function BulkCollectionPage() {
                 <div className={styles.cardDetails}>
                   <div className={styles.detailRow}>
                     <span className={styles.detailIcon}>📍</span>
-                    <span>{company.headquarters}</span>
+                    <span>{typeof company.headquarters === 'object' ? company.headquarters.name : company.headquarters}</span>
                   </div>
                   <div className={styles.detailRow}>
                     <span className={styles.detailIcon}>🏢</span>
@@ -434,6 +502,13 @@ export default function BulkCollectionPage() {
                 </div>
               )}
             </div>
+
+            {/* Error Message */}
+            {importError && (
+              <div className={styles.errorBox}>
+                <strong>Import Failed:</strong> {importError}
+              </div>
+            )}
 
             {/* Summary */}
             {importDone && importSummary && (

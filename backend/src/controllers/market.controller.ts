@@ -68,11 +68,11 @@ export const getBusinessOpportunities = async (req: Request, res: Response) => {
 export const getCountryMarket = async (req: Request, res: Response) => {
   try {
     const countries = [
-      { country: 'USA', gdpGrowth: 2.5, techSpend: '$1.8T', topIndustries: ['AI/ML', 'SaaS', 'FinTech', 'HealthTech'], talentPool: 'Large', businessClimate: 'Excellent', recommendedSectors: ['AI Software', 'Cybersecurity', 'HR Tech'] },
-      { country: 'Canada', gdpGrowth: 2.1, techSpend: '$120B', topIndustries: ['AI', 'Clean Energy', 'FinTech'], talentPool: 'Large', businessClimate: 'Excellent', recommendedSectors: ['CleanTech', 'AI', 'EdTech'] },
-      { country: 'UK', gdpGrowth: 1.8, techSpend: '$200B', topIndustries: ['FinTech', 'AI', 'Creative Tech'], talentPool: 'Large', businessClimate: 'Good', recommendedSectors: ['FinTech', 'LegalTech', 'HealthTech'] },
-      { country: 'Bangladesh', gdpGrowth: 6.2, techSpend: '$5B', topIndustries: ['RMG', 'IT Services', 'FinTech'], talentPool: 'Growing', businessClimate: 'Improving', recommendedSectors: ['SaaS HR', 'ERP', 'EdTech', 'FinTech'] },
-      { country: 'India', gdpGrowth: 7.0, techSpend: '$120B', topIndustries: ['IT Services', 'SaaS', 'FinTech', 'EdTech'], talentPool: 'Very Large', businessClimate: 'Good', recommendedSectors: ['SaaS', 'AI', 'HealthTech'] },
+      { id: 'usa', country: 'USA', gdpGrowth: 2.5, techSpend: '$1.8T', topIndustries: ['AI/ML', 'SaaS', 'FinTech', 'HealthTech'], talentPool: 'Large', businessClimate: 'Excellent', recommendedSectors: ['AI Software', 'Cybersecurity', 'HR Tech'] },
+      { id: 'canada', country: 'Canada', gdpGrowth: 2.1, techSpend: '$120B', topIndustries: ['AI', 'Clean Energy', 'FinTech'], talentPool: 'Large', businessClimate: 'Excellent', recommendedSectors: ['CleanTech', 'AI', 'EdTech'] },
+      { id: 'uk', country: 'UK', gdpGrowth: 1.8, techSpend: '$200B', topIndustries: ['FinTech', 'AI', 'Creative Tech'], talentPool: 'Large', businessClimate: 'Good', recommendedSectors: ['FinTech', 'LegalTech', 'HealthTech'] },
+      { id: 'bangladesh', country: 'Bangladesh', gdpGrowth: 6.2, techSpend: '$5B', topIndustries: ['RMG', 'IT Services', 'FinTech'], talentPool: 'Growing', businessClimate: 'Improving', recommendedSectors: ['SaaS HR', 'ERP', 'EdTech', 'FinTech'] },
+      { id: 'india', country: 'India', gdpGrowth: 7.0, techSpend: '$120B', topIndustries: ['IT Services', 'SaaS', 'FinTech', 'EdTech'], talentPool: 'Very Large', businessClimate: 'Good', recommendedSectors: ['SaaS', 'AI', 'HealthTech'] },
     ];
     res.json(countries);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Internal Server Error' }); }
