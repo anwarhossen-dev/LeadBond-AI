@@ -26,8 +26,8 @@ export default function Followups() {
         if (!res.ok) throw new Error('Failed to load follow-up tasks.');
         return res.json();
       })
-      .then((data: Followup[]) => {
-        setFollowups(data);
+      .then((data) => {
+        setFollowups(data.followups || []);
         setLoading(false);
       })
       .catch((err) => {
@@ -98,11 +98,11 @@ export default function Followups() {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
-          {followups.map((f) => {
+          {followups.map((f, index) => {
             const isOverdue = new Date(f.followUpDate) < new Date() && f.status === 'Pending';
             
             return (
-              <div key={f.id} className="glass-panel glass-panel-hover" style={{
+              <div key={`${f.id}-${index}`} className="glass-panel glass-panel-hover" style={{
                 padding: '20px',
                 display: 'flex',
                 justifyContent: 'space-between',

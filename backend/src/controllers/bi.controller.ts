@@ -24,22 +24,22 @@ export const getBusinessProfile = async (req: Request, res: Response) => {
     const fundingStatuses = ['Bootstrapped', 'Seed', 'Series A', 'Series B', 'IPO', 'Private Equity'];
 
     const profile = {
-      companyType: company.companyType || pickOne(companyTypes),
-      businessModel: company.businessModel || pickOne(businessModels),
+      companyType: pickOne(companyTypes),
+      businessModel: pickOne(businessModels),
       industry: company.industry,
-      subIndustry: company.subIndustry || 'Enterprise Software',
-      yearsInBusiness: company.yearsInBusiness ?? rnd(2, 25),
-      employeeGrowth: company.employeeGrowth ?? parseFloat((Math.random() * 40 - 5).toFixed(1)),
-      revenueEstimate: company.revenueEstimate || `$${rnd(1, 50)}M`,
-      fundingStatus: company.fundingStatus || pickOne(fundingStatuses),
-      branchCount: company.branchCount ?? rnd(1, 20),
-      marketPresence: company.marketPresence || 'Regional',
-      digitalPresenceScore: company.digitalPresenceScore ?? rnd(55, 98),
-      websiteQualityScore: company.websiteQualityScore ?? rnd(60, 95),
+      subIndustry: 'Enterprise Software',
+      yearsInBusiness: rnd(2, 25),
+      employeeGrowth: parseFloat((Math.random() * 40 - 5).toFixed(1)),
+      revenueEstimate: `$${rnd(1, 50)}M`,
+      fundingStatus: pickOne(fundingStatuses),
+      branchCount: rnd(1, 20),
+      marketPresence: 'Regional',
+      digitalPresenceScore: rnd(55, 98),
+      websiteQualityScore: rnd(60, 95),
       socialMediaActivity: pickOne(['Very Active', 'Active', 'Moderate', 'Low']),
-      hiringActivity: company.hiringActivityScore ?? rnd(30, 100),
-      expansionScore: company.expansionScore ?? rnd(40, 95),
-      businessRiskScore: company.businessRiskScore ?? rnd(10, 60),
+      hiringActivity: rnd(30, 100),
+      expansionScore: rnd(40, 95),
+      businessRiskScore: rnd(10, 60),
     };
 
     res.json(profile);

@@ -172,7 +172,7 @@ export const createCampaign = async (req: Request, res: Response) => {
 
 export const getSalesForecast = async (req: Request, res: Response) => {
   try {
-    const deals = await prisma.deal.findMany({ where: { deletedAt: null } });
+    const deals = await prisma.deal.findMany();
     const totalPipeline = deals.reduce((s, d) => s + Number(d.value), 0);
     const weighted = deals.reduce((s, d) => s + Number(d.value) * (d.probability / 100), 0);
     const wonDeals = deals.filter(d => d.stage === 'Won');

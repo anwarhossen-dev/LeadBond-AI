@@ -72,50 +72,33 @@ export default function BulkCollectionPage() {
   const [importSummary, setImportSummary]     = useState<ImportSummary | null>(null);
 
   // // ── Fetch preview whenever platform or count changes ──
-  // const fetchPreview = useCallback(async () => {
-  //   setLoading(true);
-  //   setSelected(new Set());
-  //   try {
-  //     const res = await fetch(`/api/bulk/preview?platform=${activePlatform}&count=${count}`);
-  //     if (!res.ok) throw new Error('Failed to fetch preview');
-  //     const data = await res.json();
-  //     setCompanies(data.companies || []);
-  //   } catch (err) {
-  //     console.error(err);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // }, [activePlatform, count]);
-
   const fetchPreview = useCallback(async () => {
-  setLoading(true);
-  setSelected(new Set());
-
-  try {
-    const res = await fetch(
-      `/api/bulk/preview?platform=${activePlatform}&count=${count}`
-    );
-
-    console.log("Status:", res.status);
-    console.log("Content-Type:", res.headers.get("content-type"));
-
-    const text = await res.text();
-
-    console.log(text);
-
-    if (!res.ok) {
-      throw new Error(text);
+    setLoading(true);
+    setSelected(new Set());
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const res = await fetch(`${apiUrl}/bulk/preview?platform=${activePlatform}&count=${count}`);
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Failed to fetch preview: ${res.status} ${errorText}`);
+      }
+      
+      const data = await res.json();
+      
+      // Ensure that we are setting an array, even if API returns something else.
+      if (data && Array.isArray(data.companies)) {
+        setCompanies(data.companies);
+      } else {
+        console.warn("API did not return a 'companies' array.", data);
+        setCompanies([]);
+      }
+    } catch (err) {
+      console.error("Error in fetchPreview:", err);
+      setCompanies([]); // Ensure companies is an array on error
+    } finally {
+      setLoading(false);
     }
-
-    const data = JSON.parse(text);
-
-    setCompanies(data.companies || []);
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setLoading(false);
-  }
-}, [activePlatform, count]);
+  }, [activePlatform, count]);
 
   useEffect(() => { fetchPreview(); }, [fetchPreview]);
 
