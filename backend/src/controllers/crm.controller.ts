@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../prisma';
+import { sendEmail } from '../services/mail.service';
 
 // ─── Deals ─────────────────────────────────────────────────────────────────
 
@@ -161,11 +162,109 @@ export const getCampaigns = async (req: Request, res: Response) => {
 
 export const createCampaign = async (req: Request, res: Response) => {
   try {
-    const { name, subject, body, createdBy } = req.body;
+    const { name, subject, body, createdBy, recipientIds, toEmail } = req.body;
     if (!name || !subject || !body || !createdBy) return res.status(400).json({ error: 'Missing required fields' });
-    const campaign = await prisma.emailCampaign.create({ data: { name, subject, body, createdBy } });
-    res.status(201).json(campaign);
-  } catch (err) { console.error(err); res.status(500).json({ error: 'Internal Server Error' }); }
+
+    // 1. Create campaign record (initial status Sending)
+    const campaign = await prisma.emailCampaign.create({
+      data: { name, subject, body, createdBy, status: 'Sending' }
+    });
+
+    let sentCount = 0;
+
+    if (toEmail) {
+      // 2a. Send to a single manual email address
+      try {
+        const html = `
+          <div style="font-family: sans-serif; padding: 24px; color: #1e293b; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; max-width: 600px; margin: 0 auto;">
+            <div style="white-space: pre-wrap; font-size: 15px; line-height: 1.7; color: #334155;">${body}</div>
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;">
+            <p style="font-size: 11px; color: #94a3b8; text-align: center;">Sent via LeadBond AI Sales CRM. To unsubscribe, reply with 'Remove'.</p>
+          </div>
+        `;
+
+        await sendEmail(toEmail, subject, html);
+
+        // Try to associate with an existing contact if email matches
+        const contact = await prisma.contact.findFirst({ where: { email: toEmail } });
+        if (contact) {
+          await prisma.campaignRecipient.create({
+            data: {
+              campaignId: campaign.id,
+              contactId: contact.id,
+              status: 'Sent',
+              sentAt: new Date()
+            }
+          });
+        }
+        sentCount = 1;
+      } catch (err) {
+        console.error(`Failed to send manual campaign email to ${toEmail}:`, err);
+      }
+    } else {
+      // 2b. Send to multiple contacts from DB
+      let contacts;
+      if (recipientIds && Array.isArray(recipientIds) && recipientIds.length > 0) {
+        contacts = await prisma.contact.findMany({
+          where: { id: { in: recipientIds } }
+        });
+      } else {
+        contacts = await prisma.contact.findMany();
+      }
+
+      for (const contact of contacts) {
+        if (!contact.email) continue;
+
+        try {
+          const html = `
+            <div style="font-family: sans-serif; padding: 24px; color: #1e293b; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; max-width: 600px; margin: 0 auto;">
+              <div style="white-space: pre-wrap; font-size: 15px; line-height: 1.7; color: #334155;">${body}</div>
+              <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;">
+              <p style="font-size: 11px; color: #94a3b8; text-align: center;">Sent via LeadBond AI Sales CRM. To unsubscribe, reply with 'Remove'.</p>
+            </div>
+          `;
+
+          await sendEmail(contact.email, subject, html);
+
+          await prisma.campaignRecipient.create({
+            data: {
+              campaignId: campaign.id,
+              contactId: contact.id,
+              status: 'Sent',
+              sentAt: new Date()
+            }
+          });
+
+          sentCount++;
+        } catch (err) {
+          console.error(`Failed to send campaign email to ${contact.email}:`, err);
+          await prisma.campaignRecipient.create({
+            data: {
+              campaignId: campaign.id,
+              contactId: contact.id,
+              status: 'Failed'
+            }
+          });
+        }
+      }
+    }
+
+    // 4. Update campaign status and sent totals
+    const updatedCampaign = await prisma.emailCampaign.update({
+      where: { id: campaign.id },
+      data: {
+        status: sentCount > 0 ? 'Sent' : 'Failed',
+        sentAt: new Date(),
+        totalSent: sentCount
+      },
+      include: { creator: { select: { fullName: true } } }
+    });
+
+    res.status(201).json(updatedCampaign);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 };
 
 // ─── Sales Forecast (simple aggregate) ────────────────────────────────────

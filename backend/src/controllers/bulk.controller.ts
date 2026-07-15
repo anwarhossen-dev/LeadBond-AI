@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { sendNotification } from '../services/mail.service';
 
 const prisma = new PrismaClient();
 
@@ -256,6 +257,15 @@ export const runBulkImport = async (req: Request, res: Response) => {
           icpMatch: item.icpMatch,
         });
       }
+    }
+
+    // Send email notification to user about the bulk import
+    if (user && user.email && (addedCompaniesCount > 0 || addedJobsCount > 0)) {
+      const subject = `🔔 Bulk Import Notification: ${addedCompaniesCount} Companies Added`;
+      const text = `Hi ${user.fullName},\n\nWe have successfully imported ${addedCompaniesCount} new companies and ${addedJobsCount} new job signals from ${platformMeta.name} to your pipeline.\n\nYou can review these details in your Leads and Jobs tracker.`;
+      sendNotification(user.email, subject, text).catch(err => {
+        console.error('Failed to dispatch import email notification:', err);
+      });
     }
 
     return res.json({

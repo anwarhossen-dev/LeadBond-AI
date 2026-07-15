@@ -32,6 +32,74 @@ export default function CrmPage() {
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Campaign composing states
+  const [showCompose, setShowCompose] = useState(false);
+  const [campaignForm, setCampaignForm] = useState({ name: '', subject: '', body: '', sendMode: 'contacts', toEmail: '' });
+  const [composeError, setComposeError] = useState<string | null>(null);
+  const [composeSuccess, setComposeSuccess] = useState<string | null>(null);
+  const [sendingCampaign, setSendingCampaign] = useState(false);
+
+  const handleSendCampaign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const storedUser = localStorage.getItem('leadbond_user');
+    const user = storedUser ? JSON.parse(storedUser) : null;
+
+    if (!user || !user.id) {
+      setComposeError('You must be signed in to create campaigns.');
+      return;
+    }
+
+    if (!campaignForm.name || !campaignForm.subject || !campaignForm.body) {
+      setComposeError('Please fill in all fields.');
+      return;
+    }
+
+    if (campaignForm.sendMode === 'manual' && !campaignForm.toEmail) {
+      setComposeError('Please enter target recipient email.');
+      return;
+    }
+
+    setSendingCampaign(true);
+    setComposeError(null);
+    setComposeSuccess(null);
+
+    try {
+      const res = await fetch('/api/crm/campaigns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: campaignForm.name,
+          subject: campaignForm.subject,
+          body: campaignForm.body,
+          createdBy: user.id,
+          toEmail: campaignForm.sendMode === 'manual' ? campaignForm.toEmail : undefined
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to dispatch campaign');
+      }
+
+      setComposeSuccess(campaignForm.sendMode === 'manual' ? `Email sent successfully to ${campaignForm.toEmail}!` : `Campaign dispatched successfully to ${data.totalSent} contacts!`);
+      setCampaignForm({ name: '', subject: '', body: '', sendMode: 'contacts', toEmail: '' });
+
+      // Reload campaigns
+      const campaignsRes = await fetch('/api/crm/campaigns');
+      const campaignsData = await campaignsRes.json();
+      setCampaigns(Array.isArray(campaignsData) ? campaignsData : []);
+
+      setTimeout(() => {
+        setShowCompose(false);
+        setComposeSuccess(null);
+      }, 2000);
+    } catch (err: any) {
+      setComposeError(err.message || 'Failed to send campaign.');
+    } finally {
+      setSendingCampaign(false);
+    }
+  };
+
   const load = async (t: string) => {
     setLoading(true);
     try {
@@ -218,7 +286,12 @@ export default function CrmPage() {
 
       {/* ── Campaigns ── */}
       {tab === 'campaigns' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+            <button onClick={() => setShowCompose(true)} className="btn btn-primary" style={{ fontSize: '0.82rem' }}>
+              📧 Compose Campaign
+            </button>
+          </div>
           {campaigns.length === 0 && !loading ? (
             <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '40px' }}>No email campaigns yet.</p>
           ) : campaigns.map((c: any) => (
@@ -298,6 +371,168 @@ export default function CrmPage() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Compose Campaign Modal */}
+      {showCompose && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(11, 15, 25, 0.8)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 200
+        }} onClick={() => !sendingCampaign && setShowCompose(false)}>
+          <div className="glass-panel" style={{
+            padding: '30px',
+            width: '100%',
+            maxWidth: '550px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)'
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#00f2fe' }}>📧 Compose Email Campaign</h3>
+              <button 
+                onClick={() => !sendingCampaign && setShowCompose(false)} 
+                className="btn" 
+                style={{ background: 'transparent', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer', fontSize: '1rem' }}
+              >
+                ✖
+              </button>
+            </div>
+
+            {composeError && (
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                color: '#f87171',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                fontSize: '0.8rem',
+                fontWeight: 500
+              }}>
+                ⚠️ {composeError}
+              </div>
+            )}
+
+            {composeSuccess && (
+              <div style={{
+                background: 'rgba(16, 185, 129, 0.1)',
+                color: '#34d399',
+                border: '1px solid rgba(16, 185, 129, 0.2)',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                fontSize: '0.8rem',
+                fontWeight: 500
+              }}>
+                ✅ {composeSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleSendCampaign} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>
+                  Campaign Name
+                </label>
+                <input
+                  type="text"
+                  className="input-glass"
+                  style={{ width: '100%' }}
+                  placeholder="e.g. Q3 Sales Outreach for tech sector"
+                  value={campaignForm.name}
+                  onChange={e => setCampaignForm({ ...campaignForm, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>
+                  Send Target
+                </label>
+                <select
+                  className="input-glass"
+                  style={{ width: '100%', background: '#0b0f19' }}
+                  value={campaignForm.sendMode}
+                  onChange={e => setCampaignForm({ ...campaignForm, sendMode: e.target.value })}
+                >
+                  <option value="contacts">👥 Send to all CRM Contacts</option>
+                  <option value="manual">✉️ Send to a single manual email</option>
+                </select>
+              </div>
+
+              {campaignForm.sendMode === 'manual' && (
+                <div>
+                  <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>
+                    Recipient Email (To)
+                  </label>
+                  <input
+                    type="email"
+                    className="input-glass"
+                    style={{ width: '100%' }}
+                    placeholder="e.g. client@example.com"
+                    value={campaignForm.toEmail}
+                    onChange={e => setCampaignForm({ ...campaignForm, toEmail: e.target.value })}
+                    required
+                  />
+                </div>
+              )}
+
+              <div>
+                <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>
+                  Email Subject
+                </label>
+                <input
+                  type="text"
+                  className="input-glass"
+                  style={{ width: '100%' }}
+                  placeholder="e.g. Scaling your engineering teams with AI"
+                  value={campaignForm.subject}
+                  onChange={e => setCampaignForm({ ...campaignForm, subject: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>
+                  Email Body (supports HTML styling)
+                </label>
+                <textarea
+                  className="input-glass"
+                  style={{ width: '100%', resize: 'vertical' }}
+                  rows={8}
+                  placeholder="Dear Contact,&#10;&#10;Write your email campaign copy here..."
+                  value={campaignForm.body}
+                  onChange={e => setCampaignForm({ ...campaignForm, body: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  disabled={sendingCampaign}
+                  onClick={() => setShowCompose(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary" 
+                  disabled={sendingCampaign}
+                >
+                  {sendingCampaign ? 'Sending...' : '🚀 Send Campaign'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

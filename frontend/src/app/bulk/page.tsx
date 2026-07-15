@@ -148,7 +148,7 @@ export default function BulkCollectionPage() {
   const fetchPreview = useCallback(async () => {
     dispatch({ type: 'FETCH_PREVIEW_START' });
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
       const res = await fetch(`${apiUrl}/bulk/preview?platform=${state.activePlatform}&count=${state.count}`);
       if (!res.ok) {
         const errorText = await res.text();

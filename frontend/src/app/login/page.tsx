@@ -1,0 +1,146 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+
+export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Save token & user profile
+      localStorage.setItem('leadbond_token', data.token);
+      localStorage.setItem('leadbond_user', JSON.stringify(data.user));
+
+      // Redirect to dashboard
+      router.push('/');
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '80vh',
+      width: '100%'
+    }}>
+      <div className="glass-panel" style={{
+        padding: '40px',
+        width: '100%',
+        maxWidth: '420px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '24px',
+        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <h1 className="text-gradient" style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '8px' }}>
+            Welcome Back
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+            Sign in to access your LeadBond AI Sales CRM
+          </p>
+        </div>
+
+        {error && (
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            color: '#f87171',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            fontSize: '0.82rem',
+            fontWeight: 500
+          }}>
+            ⚠️ {error}
+          </div>
+        )}
+
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div>
+            <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+              Email Address
+            </label>
+            <input
+              type="email"
+              className="input-glass"
+              style={{ width: '100%' }}
+              placeholder="e.g. sarah@leadbond.ai"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+              Password
+            </label>
+            <input
+              type="password"
+              className="input-glass"
+              style={{ width: '100%' }}
+              placeholder="••••••••"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={loading}
+            style={{ width: '100%', padding: '12px', fontSize: '0.9rem', fontWeight: 700, marginTop: '8px' }}
+          >
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
+
+        <div style={{
+          textAlign: 'center',
+          fontSize: '0.82rem',
+          color: 'var(--text-secondary)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+          paddingTop: '20px'
+        }}>
+          Don&apos;t have an account?{' '}
+          <Link href="/register" style={{ color: '#00f2fe', fontWeight: 600, textDecoration: 'none' }}>
+            Register here
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}

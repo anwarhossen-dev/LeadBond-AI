@@ -1,10 +1,31 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [user, setUser] = useState<{ fullName: string; role: string } | null>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('leadbond_user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('leadbond_token');
+    localStorage.removeItem('leadbond_user');
+    router.push('/login');
+    router.refresh();
+  };
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: '📊' },
@@ -76,26 +97,49 @@ export default function Sidebar() {
         borderTop: '1px solid rgba(255, 255, 255, 0.06)',
         paddingTop: '20px',
         display: 'flex',
-        alignItems: 'center',
+        flexDirection: 'column',
         gap: '12px'
       }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          borderRadius: '50%',
-          background: 'var(--accent-gradient)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#0b0f19',
-          fontWeight: 700
-        }}>
-          AJ
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: 'var(--accent-gradient)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#0b0f19',
+            fontWeight: 700,
+            fontSize: '0.9rem'
+          }}>
+            {user ? user.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'AJ'}
+          </div>
+          <div style={{ flexGrow: 1, overflow: 'hidden' }}>
+            <h4 style={{ fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {user ? user.fullName : 'Sarah Jenkins'}
+            </h4>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+              {user ? user.role : 'Sales Director'}
+            </p>
+          </div>
         </div>
-        <div>
-          <h4 style={{ fontSize: '0.85rem', fontWeight: 600 }}>Sarah Jenkins</h4>
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Sales Director</p>
-        </div>
+        <button 
+          onClick={handleLogout} 
+          className="btn btn-secondary" 
+          style={{ 
+            width: '100%', 
+            padding: '6px 12px', 
+            fontSize: '0.75rem', 
+            borderRadius: '8px', 
+            background: 'rgba(239, 68, 68, 0.06)', 
+            color: '#f87171', 
+            border: '1px solid rgba(239, 68, 68, 0.15)',
+            cursor: 'pointer'
+          }}
+        >
+          Logout 🚪
+        </button>
       </div>
     </aside>
   );

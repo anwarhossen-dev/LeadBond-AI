@@ -70,8 +70,15 @@ import {
   getAiRecommendations,
   getFullBiReport,
 } from '../controllers/bi.controller';
+import { login, register, getProfile } from '../controllers/auth.controller';
+import { requireAuth } from '../middleware/auth.middleware';
 
 const router = Router();
+
+// Authentication
+router.post('/auth/register', register);
+router.post('/auth/login', login);
+router.get('/auth/profile', requireAuth, getProfile);
 
 // Dashboard Stats
 router.get('/dashboard/stats', getDashboardStats);

@@ -126,8 +126,17 @@ const createJob = async (req, res) => {
                 resolvedCompanyId = company.id;
             }
             else {
-                const user = await prisma_1.default.user.findFirst();
-                const userId = user ? user.id : "";
+                // Find or create a system user for auto-captured companies
+                let user = await prisma_1.default.user.findFirst();
+                if (!user) {
+                    user = await prisma_1.default.user.create({
+                        data: {
+                            fullName: 'LeadBond System',
+                            email: 'system@leadbond.ai',
+                            role: 'admin',
+                        },
+                    });
+                }
                 const newComp = await prisma_1.default.company.create({
                     data: {
                         companyName: companyName,
@@ -136,8 +145,8 @@ const createJob = async (req, res) => {
                         licenseNo: 'LIC-' + Math.floor(100000 + Math.random() * 900000),
                         icpMatch: 'Low Fit',
                         pipelineStage: 'Captured',
-                        capturedBy: userId
-                    }
+                        capturedBy: user.id,
+                    },
                 });
                 resolvedCompanyId = newComp.id;
             }
