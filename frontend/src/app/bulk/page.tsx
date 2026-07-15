@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useReducer } from 'react';
 import styles from './page.module.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -416,7 +416,7 @@ export default function BulkCollectionPage() {
                 <div className={styles.cardDetails}>
                   <div className={styles.detailRow}>
                     <span className={styles.detailIcon}>📍</span>
-                    <span>{typeof company.headquarters === 'object' ? company.headquarters.name : company.headquarters}</span>
+                    <span>{typeof company.headquarters === 'object' ? (company.headquarters as any).name : company.headquarters}</span>
                   </div>
                   <div className={styles.detailRow}>
                     <span className={styles.detailIcon}>🏢</span>

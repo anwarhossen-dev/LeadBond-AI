@@ -69,8 +69,8 @@ export default function MarketPage() {
             <div className="glass-panel" style={{ padding: '20px' }}>
               <h3 style={{ color: '#10b981', fontWeight: 700, marginBottom: '14px' }}>📈 Growing Markets</h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {opportunities.growingMarkets?.map((m: string) => (
-                  <span key={m} style={{ background: 'rgba(16,185,129,0.1)', color: '#34d399', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '8px', padding: '5px 12px', fontSize: '0.82rem', fontWeight: 600 }}>{m}</span>
+                {opportunities.growingMarkets?.map((m: any) => (
+                  <span key={m.name} style={{ background: 'rgba(16,185,129,0.1)', color: '#34d399', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '8px', padding: '5px 12px', fontSize: '0.82rem', fontWeight: 600 }}>{m.name}</span>
                 ))}
               </div>
             </div>

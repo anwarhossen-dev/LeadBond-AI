@@ -35,13 +35,41 @@ export default function CrmPage() {
   const load = async (t: string) => {
     setLoading(true);
     try {
-      if (t === 'deals' && !deals.length) setDeals(await (await fetch('/api/crm/deals')).json());
-      if (t === 'contacts' && !contacts.length) setContacts(await (await fetch('/api/crm/contacts')).json());
-      if (t === 'opportunities' && !opportunities.length) setOpportunities(await (await fetch('/api/crm/opportunities')).json());
-      if (t === 'tasks' && !tasks.length) setTasks(await (await fetch('/api/crm/tasks')).json());
-      if (t === 'campaigns' && !campaigns.length) setCampaigns(await (await fetch('/api/crm/campaigns')).json());
-      if (t === 'forecast' && !forecast) setForecast(await (await fetch('/api/crm/forecast')).json());
-      if (t === 'timeline' && !activities.length) setActivities(await (await fetch('/api/crm/activities')).json());
+      if (t === 'deals' && !deals.length) {
+        const res = await fetch('/api/crm/deals');
+        const data = await res.json();
+        setDeals(Array.isArray(data) ? data : []);
+      }
+      if (t === 'contacts' && !contacts.length) {
+        const res = await fetch('/api/crm/contacts');
+        const data = await res.json();
+        setContacts(Array.isArray(data) ? data : []);
+      }
+      if (t === 'opportunities' && !opportunities.length) {
+        const res = await fetch('/api/crm/opportunities');
+        const data = await res.json();
+        setOpportunities(Array.isArray(data) ? data : []);
+      }
+      if (t === 'tasks' && !tasks.length) {
+        const res = await fetch('/api/crm/tasks');
+        const data = await res.json();
+        setTasks(Array.isArray(data) ? data : []);
+      }
+      if (t === 'campaigns' && !campaigns.length) {
+        const res = await fetch('/api/crm/campaigns');
+        const data = await res.json();
+        setCampaigns(Array.isArray(data) ? data : []);
+      }
+      if (t === 'forecast' && !forecast) {
+        const res = await fetch('/api/crm/forecast');
+        const data = await res.json();
+        setForecast(data && !data.error ? data : null);
+      }
+      if (t === 'timeline' && !activities.length) {
+        const res = await fetch('/api/crm/activities');
+        const data = await res.json();
+        setActivities(Array.isArray(data) ? data : []);
+      }
     } catch (e) { console.error(e); }
     setLoading(false);
   };
