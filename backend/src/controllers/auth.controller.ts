@@ -54,22 +54,21 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      return res.status(400).json({ error: 'Invalid email or password' });
+
+    // A known valid bcrypt hash. This is used for timing consistency
+    // to prevent attackers from guessing whether a user email exists.
+    const dummyHash = '$2a$10$NZ39N954s2A5Sj2a0s9a5uRRg53v1/n49xqh/VA91vB5f8xXz.O5e';
+
+    if (!user || !user.password) {
+      // Securely compare against a dummy hash to ensure consistent response time.
+      await bcrypt.compare(password, dummyHash);
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    // Auto-hash password for seeded users who don't have it set yet
-    if (!user.password) {
-      const passwordHash = await bcrypt.hash(password, 10);
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { password: passwordHash }
-      });
-    } else {
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(400).json({ error: 'Invalid email or password' });
-      }
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
@@ -86,7 +85,7 @@ export const login = async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error('Login error:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(500).json({ error: 'An internal error occurred during login.' });
   }
 };
 

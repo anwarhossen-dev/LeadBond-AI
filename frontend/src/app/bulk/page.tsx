@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useReducer } from 'react';
+import { useEffect, useCallback, useReducer } from 'react';
 import styles from './page.module.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -210,24 +210,30 @@ export default function BulkCollectionPage() {
 
     dispatch({ type: 'RUN_IMPORT_START' });
 
-    // Simulate per-company progress (real import happens in bulk, but we animate it)
-    const simulationDelay = Math.max(200, Math.floor(3000 / toImport.length));
-    for (let i = 0; i < toImport.length; i++) {
-      await new Promise((r) => setTimeout(r, simulationDelay));
-      const c = toImport[i];
-      dispatch({
-        type: 'ADD_IMPORT_LOG',
-        payload: { id: `${c.previewId}-${Date.now()}`, companyName: c.companyName, jobTitle: c.jobTitle, status: 'success' }
-      });
-      dispatch({ type: 'SET_IMPORT_PROGRESS', payload: Math.round(((i + 1) / toImport.length) * 100) });
-    }
+    // Use a Web Worker for the simulation to avoid blocking the main thread.
+    const worker = new Worker(new URL('../../workers/import-worker.ts', import.meta.url));
 
-    // Actual API call
-    try {
-      const res = await fetch('/api/companies/bulk-import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    worker.onmessage = (event) => {
+      if (event.data.type === 'progress') {
+        dispatch({ type: 'ADD_IMPORT_LOG', payload: event.data.payload.log });
+        dispatch({ type: 'SET_IMPORT_PROGRESS', payload: event.data.payload.progress });
+      } else if (event.data.type === 'done') {
+        // When simulation is done, make the actual API call
+        performApiImport(toImport);
+        worker.terminate();
+      }
+    };
+
+    worker.postMessage({ toImport });
+  };
+
+  const performApiImport = async (toImport: Company[]) => {
+     try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
+      const res = await fetch(`${apiUrl}/companies/bulk-import`, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
           platform: activePlatform,
           selectedIds: Array.from(selected),
           count: toImport.length,
@@ -235,7 +241,9 @@ export default function BulkCollectionPage() {
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ message: 'An unknown error occurred during import.' }));
+        const errorData = await res.json().catch(() => ({
+          message: 'An unknown error occurred during import.',
+        }));
         throw new Error(errorData.message || `HTTP error! status: ${res.status}`);
       }
 
@@ -243,9 +251,9 @@ export default function BulkCollectionPage() {
       if (data.summary) dispatch({ type: 'SET_IMPORT_SUMMARY', payload: data.summary });
     } catch (err) {
       dispatch({ type: 'SET_IMPORT_ERROR', payload: err instanceof Error ? err.message : 'An unexpected error occurred.' });
+    } finally {
+      dispatch({ type: 'FINISH_IMPORT' });
     }
-
-    dispatch({ type: 'FINISH_IMPORT' });
   };
 
   const closeModal = () => {

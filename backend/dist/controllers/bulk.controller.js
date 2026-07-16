@@ -84,6 +84,19 @@ const PLATFORM_META = {
     bdjobs: { name: 'BDJobs', type: 'Job Board' },
     all_sites: { name: 'All Sites', type: 'Aggregated Web Capture' },
 };
+function analyzeIcpMatch(jobTitle, industry) {
+    const title = (jobTitle || '').toLowerCase();
+    const ind = (industry || '').toLowerCase();
+    const highKeywords = ['software', 'engineer', 'developer', 'tech', 'react', 'next.js', 'node', 'it', 'cloud', 'data', 'cto', 'engineering'];
+    const medKeywords = ['marketing', 'sales', 'manager', 'finance', 'design', 'hr', 'recruiter'];
+    const hasHigh = highKeywords.some(kw => title.includes(kw) || ind.includes(kw));
+    if (hasHigh)
+        return 'High Fit';
+    const hasMed = medKeywords.some(kw => title.includes(kw) || ind.includes(kw));
+    if (hasMed)
+        return 'Medium Fit';
+    return 'Low Fit';
+}
 // ─────────────────────────────────────────────────────────────────────────────
 //  PREVIEW API — returns preview data without saving to DB
 // ─────────────────────────────────────────────────────────────────────────────
@@ -116,7 +129,7 @@ exports.getBulkPreview = getBulkPreview;
 // ─────────────────────────────────────────────────────────────────────────────
 const runBulkImport = async (req, res) => {
     try {
-        const { platform = 'linkedin', selectedIds } = req.body;
+        const { platform = 'linkedin', selectedIds, customItems } = req.body;
         const countParam = parseInt(req.body.count || req.query.count || '20', 10);
         const count = Math.min(Math.max(countParam, 1), 50);
         const platformKey = platform.toLowerCase().replace(' ', '_');
@@ -141,7 +154,13 @@ const runBulkImport = async (req, res) => {
         }
         // Determine which companies to process
         let targetPool;
-        if (selectedIds && Array.isArray(selectedIds) && selectedIds.length > 0) {
+        if (customItems && Array.isArray(customItems) && customItems.length > 0) {
+            targetPool = customItems.map(item => ({
+                ...item,
+                icpMatch: analyzeIcpMatch(item.jobTitle, item.industry || 'Technology')
+            }));
+        }
+        else if (selectedIds && Array.isArray(selectedIds) && selectedIds.length > 0) {
             // Import only selected by index
             targetPool = selectedIds
                 .map((id) => {
@@ -165,17 +184,17 @@ const runBulkImport = async (req, res) => {
                 company = await prisma.company.create({
                     data: {
                         companyName: item.companyName,
-                        industry: item.industry,
-                        website: item.website,
+                        industry: item.industry || 'Technology',
+                        website: item.website || '',
                         licenseNo: 'LIC-' + Math.floor(100000 + Math.random() * 900000),
-                        icpMatch: item.icpMatch,
+                        icpMatch: item.icpMatch || 'High Fit',
                         pipelineStage: 'Captured',
                         capturedBy: userId,
-                        companySize: item.size,
-                        headquarters: item.headquarters,
-                        country: item.country,
-                        phone: item.phone,
-                        email: item.email,
+                        companySize: item.size || '10-50',
+                        headquarters: item.headquarters || item.location || 'Unknown',
+                        country: item.country || 'Bangladesh',
+                        phone: item.phone || '',
+                        email: item.email || '',
                     }
                 });
                 addedCompaniesCount++;
@@ -190,15 +209,15 @@ const runBulkImport = async (req, res) => {
                         data: {
                             companyId: company.id,
                             jobTitle: item.jobTitle,
-                            position: item.jobTitle.split(' ').slice(1).join(' '),
+                            position: item.jobTitle.split(' ').slice(1).join(' ') || item.jobTitle,
                             department: 'General',
                             experience: '2+ Years',
-                            salary: item.salary,
-                            location: item.headquarters,
-                            workMode: item.workMode,
-                            jobType: item.jobType,
-                            description: `Seeking a specialist proficient in: ${item.requirements}.`,
-                            requirements: item.requirements,
+                            salary: item.salary || 'Competitive',
+                            location: item.headquarters || item.location || 'Unknown',
+                            workMode: item.workMode || 'Remote',
+                            jobType: item.jobType || 'Full Time',
+                            description: item.description || `Seeking a specialist proficient in: ${item.requirements || 'skills'}.`,
+                            requirements: item.requirements || 'Not specified',
                             benefits: 'Competitive package with performance bonuses.',
                             status: 'Draft',
                         }

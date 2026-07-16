@@ -79,26 +79,62 @@ async function loadBulkPreview() {
   showBulkStatus('লোড হচ্ছে…', 'info');
   renderSkeletons();
 
-  try {
-    const res  = await fetch(`${API}/bulk/preview?platform=${bulkPlatform}&count=${bulkCount}`);
-    const data = await res.json();
+  const liveMode = el('chk-live-capture').checked;
 
-    if (!data.success || !data.companies) throw new Error('No data');
+  if (liveMode) {
+    chrome.runtime.sendMessage({ action: 'getAutoJobs' }, (res) => {
+      if (chrome.runtime.lastError || !res || !res.jobs) {
+        showBulkStatus('❌ Live jobs পাওয়া যায়নি।', 'error');
+        bulkCompanies = [];
+        renderCompanyList();
+      } else {
+        bulkCompanies = res.jobs.map((job, idx) => ({
+          previewId: `live_${idx}`,
+          companyName: job.companyName,
+          industry: 'Technology',
+          headquarters: job.location || 'Unknown',
+          country: 'Bangladesh',
+          phone: '',
+          email: '',
+          website: job.jobUrl || '',
+          size: '10-50',
+          jobTitle: job.jobTitle,
+          workMode: job.workMode || 'Remote',
+          jobType: 'Full Time',
+          salary: 'Competitive',
+          requirements: 'Not specified',
+          icpMatch: 'High Fit',
+          originalCapturedJob: job
+        }));
 
-    bulkCompanies = data.companies;
-    bulkSelected.clear();
-    renderCompanyList();
-    updateSelInfo();
-    showBulkStatus(`✅ ${data.companies.length} টি কোম্পানি লোড হয়েছে`, 'success', 2500);
+        bulkSelected.clear();
+        renderCompanyList();
+        updateSelInfo();
+        showBulkStatus(`✅ ${bulkCompanies.length} টি লাইভ জব কন্টাক্ট লোড হয়েছে`, 'success', 2500);
+      }
+    });
+  } else {
+    try {
+      const res  = await fetch(`${API}/bulk/preview?platform=${bulkPlatform}&count=${bulkCount}`);
+      const data = await res.json();
 
-  } catch (err) {
-    console.error('[LeadBond Bulk]', err);
-    showBulkStatus('❌ Backend connect হয়নি। Server চালু আছে?', 'error');
-    el('company-list').innerHTML = `
-      <div style="text-align:center;padding:40px 20px;color:var(--dim);font-size:.8rem;">
-        ⚠️ Backend server চালু করুন<br>
-        <span style="color:var(--muted);font-size:.7rem;">localhost:5000</span>
-      </div>`;
+      if (!data.success || !data.companies) throw new Error('No data');
+
+      bulkCompanies = data.companies;
+      bulkSelected.clear();
+      renderCompanyList();
+      updateSelInfo();
+      showBulkStatus(`✅ ${data.companies.length} টি কোম্পানি লোড হয়েছে`, 'success', 2500);
+
+    } catch (err) {
+      console.error('[LeadBond Bulk]', err);
+      showBulkStatus('❌ Backend connect হয়নি। Server চালু আছে?', 'error');
+      el('company-list').innerHTML = `
+        <div style="text-align:center;padding:40px 20px;color:var(--dim);font-size:.8rem;">
+          ⚠️ Backend server চালু করুন<br>
+          <span style="color:var(--muted);font-size:.7rem;">localhost:5000</span>
+        </div>`;
+    }
   }
 }
 
@@ -201,6 +237,7 @@ function updateSelInfo() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function runBulkSync() {
+  const liveMode = el('chk-live-capture').checked;
   const toImport = bulkSelected.size > 0
     ? bulkCompanies.filter(co => bulkSelected.has(co.previewId))
     : bulkCompanies;
@@ -240,16 +277,27 @@ async function runBulkSync() {
 
   // API call
   try {
+    const payload = {
+      platform:    bulkPlatform,
+      selectedIds: Array.from(bulkSelected),
+      count:       toImport.length,
+    };
+
+    if (liveMode) {
+      payload.customItems = toImport;
+    }
+
     const res  = await fetch(`${API}/companies/bulk-import`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        platform:    bulkPlatform,
-        selectedIds: Array.from(bulkSelected),
-        count:       toImport.length,
-      }),
+      body:    JSON.stringify(payload),
     });
     const data = await res.json();
+
+    if (liveMode) {
+      const urls = toImport.map(j => j.website).filter(Boolean);
+      chrome.runtime.sendMessage({ action: 'removeSyncedJobs', urls });
+    }
 
     if (data.summary) {
       el('sum-companies').textContent  = data.summary.companiesImported;
@@ -478,6 +526,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ── Slider ──
   el('bulk-slider').addEventListener('input', function () {
     onSliderChange(this);
+  });
+
+  // ── Live Mode Checkbox ──
+  el('chk-live-capture').addEventListener('change', () => {
+    loadBulkPreview();
   });
 
   // ── Select All / Clear / Refresh ──

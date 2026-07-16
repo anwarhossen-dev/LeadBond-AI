@@ -227,28 +227,16 @@ const getCampaigns = async (req, res) => {
 exports.getCampaigns = getCampaigns;
 const createCampaign = async (req, res) => {
     try {
-        const { name, subject, body, createdBy, recipientIds } = req.body;
+        const { name, subject, body, createdBy, recipientIds, toEmail } = req.body;
         if (!name || !subject || !body || !createdBy)
             return res.status(400).json({ error: 'Missing required fields' });
         // 1. Create campaign record (initial status Sending)
         const campaign = await prisma_1.default.emailCampaign.create({
             data: { name, subject, body, createdBy, status: 'Sending' }
         });
-        // 2. Fetch target contacts
-        let contacts;
-        if (recipientIds && Array.isArray(recipientIds) && recipientIds.length > 0) {
-            contacts = await prisma_1.default.contact.findMany({
-                where: { id: { in: recipientIds } }
-            });
-        }
-        else {
-            contacts = await prisma_1.default.contact.findMany();
-        }
         let sentCount = 0;
-        // 3. Send emails
-        for (const contact of contacts) {
-            if (!contact.email)
-                continue;
+        if (toEmail) {
+            // 2a. Send to a single manual email address
             try {
                 const html = `
           <div style="font-family: sans-serif; padding: 24px; color: #1e293b; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; max-width: 600px; margin: 0 auto;">
@@ -257,26 +245,68 @@ const createCampaign = async (req, res) => {
             <p style="font-size: 11px; color: #94a3b8; text-align: center;">Sent via LeadBond AI Sales CRM. To unsubscribe, reply with 'Remove'.</p>
           </div>
         `;
-                await (0, mail_service_1.sendEmail)(contact.email, subject, html);
-                await prisma_1.default.campaignRecipient.create({
-                    data: {
-                        campaignId: campaign.id,
-                        contactId: contact.id,
-                        status: 'Sent',
-                        sentAt: new Date()
-                    }
-                });
-                sentCount++;
+                await (0, mail_service_1.sendEmail)(toEmail, subject, html);
+                // Try to associate with an existing contact if email matches
+                const contact = await prisma_1.default.contact.findFirst({ where: { email: toEmail } });
+                if (contact) {
+                    await prisma_1.default.campaignRecipient.create({
+                        data: {
+                            campaignId: campaign.id,
+                            contactId: contact.id,
+                            status: 'Sent',
+                            sentAt: new Date()
+                        }
+                    });
+                }
+                sentCount = 1;
             }
             catch (err) {
-                console.error(`Failed to send campaign email to ${contact.email}:`, err);
-                await prisma_1.default.campaignRecipient.create({
-                    data: {
-                        campaignId: campaign.id,
-                        contactId: contact.id,
-                        status: 'Failed'
-                    }
+                console.error(`Failed to send manual campaign email to ${toEmail}:`, err);
+            }
+        }
+        else {
+            // 2b. Send to multiple contacts from DB
+            let contacts;
+            if (recipientIds && Array.isArray(recipientIds) && recipientIds.length > 0) {
+                contacts = await prisma_1.default.contact.findMany({
+                    where: { id: { in: recipientIds } }
                 });
+            }
+            else {
+                contacts = await prisma_1.default.contact.findMany();
+            }
+            for (const contact of contacts) {
+                if (!contact.email)
+                    continue;
+                try {
+                    const html = `
+            <div style="font-family: sans-serif; padding: 24px; color: #1e293b; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; max-width: 600px; margin: 0 auto;">
+              <div style="white-space: pre-wrap; font-size: 15px; line-height: 1.7; color: #334155;">${body}</div>
+              <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;">
+              <p style="font-size: 11px; color: #94a3b8; text-align: center;">Sent via LeadBond AI Sales CRM. To unsubscribe, reply with 'Remove'.</p>
+            </div>
+          `;
+                    await (0, mail_service_1.sendEmail)(contact.email, subject, html);
+                    await prisma_1.default.campaignRecipient.create({
+                        data: {
+                            campaignId: campaign.id,
+                            contactId: contact.id,
+                            status: 'Sent',
+                            sentAt: new Date()
+                        }
+                    });
+                    sentCount++;
+                }
+                catch (err) {
+                    console.error(`Failed to send campaign email to ${contact.email}:`, err);
+                    await prisma_1.default.campaignRecipient.create({
+                        data: {
+                            campaignId: campaign.id,
+                            contactId: contact.id,
+                            status: 'Failed'
+                        }
+                    });
+                }
             }
         }
         // 4. Update campaign status and sent totals
