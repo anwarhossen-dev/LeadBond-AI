@@ -53,6 +53,8 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
+    console.log(`Login attempt for: "${email}", password length: ${password.length}`);
+
     const user = await prisma.user.findUnique({ where: { email } });
 
     // A known valid bcrypt hash. This is used for timing consistency
